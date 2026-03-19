@@ -1,0 +1,19 @@
+modules:
+  jira:globalPage:
+    - key: my-full-page-module
+      resource: main
+      routePrefix: custom-ui
+      title: Salzer Management Dashboard
+resources:
+  - key: main
+    path: static/hello-world/build
+app:
+  runtime:
+    name: nodejs22.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/3a7b5bda-a595-46ee-965d-b2d03fad59e6
+permissions:
+  scopes:
+    - read:jira-user
+    - read:jira-work
