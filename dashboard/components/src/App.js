@@ -25,6 +25,7 @@ const App = () => {
   const [totalIssues, setTotalIssues] = useState(0);
   const [statusFilter, setStatusFilter] = useState("");
   const [slaData, setSlaData] = useState([]);
+  const [openStatusData, setOpenStatusData] = useState([]);
   //const [totalStatusIssues, setTotalStatusIssues] = useState(0);
 
   const pageSize = 10;
@@ -36,6 +37,80 @@ const App = () => {
     ...chartData.map(item => item.count),
     1
   );
+
+  // Function to handle status filter click for open issues
+  const fetchOpenStatusSummary = async () => {
+    try {
+      let jql = `
+statusCategory != Done 
+AND status NOT IN ("Closed","Resolved","Canceled")
+`;
+
+      if (selectedProject) {
+        jql += ` AND project = "${selectedProject}"`;
+      }
+
+      let allIssues = [];
+      let nextPageToken = null;
+
+      do {
+        const body = {
+          jql,
+          maxResults: 100,
+          fields: ["status"]
+        };
+
+        if (nextPageToken) {
+          body.nextPageToken = nextPageToken;
+        }
+
+        const response = await requestJira(`/rest/api/3/search/jql`, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+        if (!data.issues) break;
+
+        allIssues = [...allIssues, ...data.issues];
+        nextPageToken = data.nextPageToken;
+
+      } while (nextPageToken);
+
+      // Dynamic grouping
+      const grouped = {};
+
+      allIssues.forEach(issue => {
+        const status = issue.fields.status.name;
+
+        if (!grouped[status]) {
+          grouped[status] = 0;
+        }
+
+        grouped[status] += 1;
+      });
+
+      const formatted = Object.keys(grouped).map(status => ({
+        label: status,
+        count: grouped[status]
+      }));
+      formatted.sort((a, b) => b.count - a.count);
+      setOpenStatusData(formatted);
+
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedProject) {
+      fetchOpenStatusSummary();
+    }
+  }, [selectedProject]);
 
   // Fetch issues based on date range and selected project
   const fetchIssueData = async () => {
@@ -506,6 +581,126 @@ AND status NOT IN ("Canceled")`;
   return (
     <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ marginBottom: "10px" }}>
+          Active Issues by Status
+        </h2>
+
+        <p style={{ color: "#6B778C", marginBottom: "20px" }}>
+          (All tickets irrespective of date range)
+        </p>
+
+        {/* Project Dropdown (optional if already present) */}
+        <select
+          value={selectedProject}
+          onChange={(e) => setSelectedProject(e.target.value)}
+          style={{ marginBottom: "20px", padding: "6px" }}
+        >
+          <option value="">All Projects</option>
+          {projects.map((project) => (
+            <option key={project.id} value={project.key}>
+              {project.name}
+            </option>
+          ))}
+        </select>
+
+        {openStatusData.length > 0 && (() => {
+          const total = openStatusData.reduce((sum, i) => sum + i.count, 0);
+          const radius = 80;
+          const circumference = 2 * Math.PI * radius;
+          let cumulative = 0;
+
+          const getDynamicColor = (index) => {
+            const colors = [
+              "#0052CC",
+              "#36B37E",
+              "#FF8C00",
+              "#6554C0",
+              "#00B8D9",
+              "#FF5630"
+            ];
+            return colors[index % colors.length];
+          };
+
+          return (
+            <div style={{ display: "flex", gap: "40px", alignItems: "center" }}>
+              <svg width="200" height="200" viewBox="0 0 200 200">
+                <g transform="rotate(-90 100 100)">
+                  {[...openStatusData].reverse().map((item, index) => {
+                    const percent = total === 0 ? 0 : item.count / total;
+                    const dash = `${percent * circumference} ${circumference}`;
+                    const offset = -cumulative * circumference;
+
+                    cumulative += percent;
+
+                    return (
+                      <circle
+                        key={index}
+                        r={radius}
+                        cx="100"
+                        cy="100"
+                        fill="transparent"
+                        stroke={getDynamicColor(index)}
+                        strokeWidth="30"
+                        strokeDasharray={dash}
+                        strokeDashoffset={offset}
+                        strokeLinecap="butt"
+                        style={{
+                          cursor: "pointer",
+                          pointerEvents: "visibleStroke"
+                        }}
+                        onClick={() => {
+                          let jql = `status = "${item.label}"`;
+                          if (selectedProject) {
+                            jql += ` AND project = "${selectedProject}"`;
+                          }
+
+                          router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
+                        }}
+                      />
+                    );
+                  })}
+                </g>
+
+                {/* Center Text */}
+                <text
+                  x="100"
+                  y="100"
+                  textAnchor="middle"
+                  fontSize="22"
+                  fontWeight="bold"
+                >
+                  {total}
+                </text>
+              </svg>
+
+              {/* Legend */}
+              <div>
+                {openStatusData.map((item, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      marginBottom: "8px"
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "14px",
+                        height: "14px",
+                        backgroundColor: getDynamicColor(index),
+                        marginRight: "8px"
+                      }}
+                    />
+                    <span>{item.label}: {item.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        <hr style={{ margin: "40px 0", borderColor: "#DFE1E6" }} />
         <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>
           Select Date Range & Project
         </h1>

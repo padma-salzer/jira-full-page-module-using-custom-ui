@@ -6,7 +6,7 @@ modules:
       title: Salzer Management Dashboard
 resources:
   - key: main
-    path: static/hello-world/build
+    path: dashboard/components/build
 app:
   runtime:
     name: nodejs22.x
