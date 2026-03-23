@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { requestJira, router } from '@forge/bridge';
-import '@atlaskit/css-reset';
-
+import React, { useState, useEffect } from "react";
+import { requestJira, router } from "@forge/bridge";
+import "@atlaskit/css-reset";
 
 const App = () => {
-
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   //const formatDateForInput = (date) => date.toISOString().split("T")[0];
@@ -33,10 +31,7 @@ const App = () => {
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString("en-GB").replace(/\//g, "-");
   };
-  const maxCount = Math.max(
-    ...chartData.map(item => item.count),
-    1
-  );
+  const maxCount = Math.max(...chartData.map((item) => item.count), 1);
 
   // Function to handle status filter click for open issues
   const fetchOpenStatusSummary = async () => {
@@ -57,7 +52,7 @@ AND status NOT IN ("Closed","Resolved","Canceled")
         const body = {
           jql,
           maxResults: 100,
-          fields: ["status"]
+          fields: ["status"],
         };
 
         if (nextPageToken) {
@@ -68,9 +63,9 @@ AND status NOT IN ("Closed","Resolved","Canceled")
           method: "POST",
           headers: {
             Accept: "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify(body)
+          body: JSON.stringify(body),
         });
 
         const data = await response.json();
@@ -78,36 +73,34 @@ AND status NOT IN ("Closed","Resolved","Canceled")
 
         allTickets = [...allTickets, ...data.issues];
         nextPageToken = data.nextPageToken;
-
       } while (nextPageToken);
 
       // Dynamic grouping
       const grouped = {};
 
-      allTickets.forEach(issue => {
+      allTickets.forEach((issue) => {
         const status = issue.fields.status.name;
         const category = issue.fields.status.statusCategory.name;
 
         if (!grouped[status]) {
           grouped[status] = {
             count: 0,
-            category
+            category,
           };
         }
 
         grouped[status].count += 1;
       });
 
-      const formatted = Object.keys(grouped).map(status => ({
+      const formatted = Object.keys(grouped).map((status) => ({
         label: status,
         count: grouped[status].count,
-        category: grouped[status].category
+        category: grouped[status].category,
       }));
 
       formatted.sort((a, b) => b.count - a.count);
 
       setOpenStatusData(formatted);
-
     } catch (error) {
       console.error(error);
     }
@@ -127,7 +120,6 @@ AND status NOT IN ("Closed","Resolved","Canceled")
     }
 
     try {
-
       let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59"`;
 
       if (selectedProject) {
@@ -138,11 +130,10 @@ AND status NOT IN ("Closed","Resolved","Canceled")
       let nextPageToken = null;
 
       do {
-
         const body = {
           jql,
           maxResults: 100,
-          fields: ["created"]
+          fields: ["created"],
         };
 
         if (nextPageToken) {
@@ -153,9 +144,9 @@ AND status NOT IN ("Closed","Resolved","Canceled")
           method: "POST",
           headers: {
             Accept: "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify(body)
+          body: JSON.stringify(body),
         });
 
         const data = await response.json();
@@ -164,31 +155,25 @@ AND status NOT IN ("Closed","Resolved","Canceled")
 
         allTickets = [...allTickets, ...data.issues];
         nextPageToken = data.nextPageToken;
-
       } while (nextPageToken);
-
 
       // Group by Date
       const grouped = {};
 
-      allTickets.forEach(issue => {
-
-        const date = new Date(issue.fields.created)
-          .toLocaleDateString("en-CA");
+      allTickets.forEach((issue) => {
+        const date = new Date(issue.fields.created).toLocaleDateString("en-CA");
 
         grouped[date] = (grouped[date] || 0) + 1;
-
       });
 
       const formatted = Object.keys(grouped)
         .sort()
-        .map(date => ({
+        .map((date) => ({
           date,
-          count: grouped[date]
+          count: grouped[date],
         }));
 
       setChartData(formatted);
-
     } catch (error) {
       console.error(error);
     }
@@ -197,16 +182,19 @@ AND status NOT IN ("Closed","Resolved","Canceled")
   // Fetch list of projects for dropdown
   const fetchProjects = async () => {
     try {
-      const response = await requestJira(
-        `/rest/api/3/project/search`,
-        {
-          headers: { Accept: "application/json" }
-        }
-      );
+      const response = await requestJira(`/rest/api/3/project/search`, {
+        headers: { Accept: "application/json" },
+      });
 
       const data = await response.json();
 
-      setProjects(data.values);
+      // Filter only Active category projects
+      const activeProjects = (data.values || []).filter(
+        (project) =>
+          project.projectCategory && project.projectCategory.name === "Active",
+      );
+
+      setProjects(activeProjects);
     } catch (error) {
       console.error("Failed to fetch projects:", error);
     }
@@ -239,7 +227,7 @@ AND status NOT IN ("Closed","Resolved","Canceled")
         const body = {
           jql,
           maxResults: 100,
-          fields: ["status"]
+          fields: ["status"],
         };
 
         if (nextPageToken) {
@@ -250,9 +238,9 @@ AND status NOT IN ("Closed","Resolved","Canceled")
           method: "POST",
           headers: {
             Accept: "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify(body)
+          body: JSON.stringify(body),
         });
 
         const data = await response.json();
@@ -264,36 +252,34 @@ AND status NOT IN ("Closed","Resolved","Canceled")
 
         allTickets = [...allTickets, ...data.issues];
         nextPageToken = data.nextPageToken;
-
       } while (nextPageToken);
 
       // Group by status
       const grouped = {};
 
-      allTickets.forEach(issue => {
+      allTickets.forEach((issue) => {
         const statusName = issue.fields.status.name;
         const category = issue.fields.status.statusCategory.name;
 
         if (!grouped[statusName]) {
           grouped[statusName] = {
             count: 0,
-            category
+            category,
           };
         }
 
         grouped[statusName].count += 1;
       });
 
-      const formatted = Object.keys(grouped).map(status => ({
+      const formatted = Object.keys(grouped).map((status) => ({
         status,
         count: grouped[status].count,
-        category: grouped[status].category
+        category: grouped[status].category,
       }));
 
       formatted.sort((a, b) => b.count - a.count);
 
       setStatusData(formatted);
-
     } catch (error) {
       console.error("Error fetching status data:", error);
     }
@@ -302,7 +288,6 @@ AND status NOT IN ("Closed","Resolved","Canceled")
   // Total Count
   const fetchTotalTickets = async () => {
     try {
-
       let jql = `created >= "${fromDate}" 
 AND created <= "${toDate} 23:59" 
 AND statusCategory IN ("To Do","In Progress")`;
@@ -315,13 +300,13 @@ AND statusCategory IN ("To Do","In Progress")`;
         method: "POST",
         headers: {
           Accept: "application/json",
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           jql,
           maxResults: 0,
-          fields: []
-        })
+          fields: [],
+        }),
       });
 
       const data = await response.json();
@@ -331,7 +316,6 @@ AND statusCategory IN ("To Do","In Progress")`;
       if (data.total !== undefined) {
         setTotalTickets(data.total);
       }
-
     } catch (error) {
       console.error("Error fetching total issues:", error);
     }
@@ -339,9 +323,7 @@ AND statusCategory IN ("To Do","In Progress")`;
 
   // list view
   const fetchOpenTickets = async (token = null) => {
-
     try {
-
       let jql = `created >= "${fromDate}" 
 AND created <= "${toDate} 23:59" 
 AND statusCategory IN ("To Do","In Progress")`;
@@ -353,7 +335,7 @@ AND statusCategory IN ("To Do","In Progress")`;
       const body = {
         jql,
         maxResults: pageSize,
-        fields: ["summary", "status", "assignee", "created"]
+        fields: ["summary", "status", "assignee", "created"],
       };
 
       if (token) {
@@ -364,32 +346,28 @@ AND statusCategory IN ("To Do","In Progress")`;
         method: "POST",
         headers: {
           Accept: "application/json",
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
 
-      setTickets(prev => [...prev, ...(data.issues || [])]);
+      setTickets((prev) => [...prev, ...(data.issues || [])]);
 
       setNextPageToken(data.nextPageToken || null);
 
       setTotalTickets(data.total || 0);
-
     } catch (error) {
       console.error("Error fetching issues:", error);
     }
-
   };
 
   // SLA Status
   const fetchSLAData = async () => {
-
     setSlaData([]);
 
     try {
-
       let jql = `created >= "${fromDate}"
 AND created <= "${toDate} 23:59"
 AND statusCategory = Done
@@ -403,11 +381,10 @@ AND status NOT IN ("Canceled")`;
       let nextPageToken = null;
 
       do {
-
         const body = {
           jql,
           maxResults: 100,
-          fields: ["customfield_10273"]
+          fields: ["customfield_10273"],
         };
 
         if (nextPageToken) {
@@ -418,9 +395,9 @@ AND status NOT IN ("Canceled")`;
           method: "POST",
           headers: {
             Accept: "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify(body)
+          body: JSON.stringify(body),
         });
 
         const data = await response.json();
@@ -429,7 +406,6 @@ AND status NOT IN ("Canceled")`;
 
         allTickets = [...allTickets, ...data.issues];
         nextPageToken = data.nextPageToken;
-
       } while (nextPageToken);
 
       if (allTickets.length === 0) {
@@ -439,26 +415,21 @@ AND status NOT IN ("Canceled")`;
 
       const grouped = {
         Met: 0,
-        Breached: 0
+        Breached: 0,
       };
 
       let hasSLA = false;
 
-      allTickets.forEach(issue => {
-
+      allTickets.forEach((issue) => {
         const slaField = issue.fields?.["customfield_10273"];
         if (!slaField) return;
 
         hasSLA = true;
 
-        const sla =
-          typeof slaField === "string"
-            ? slaField
-            : slaField.value;
+        const sla = typeof slaField === "string" ? slaField : slaField.value;
 
         if (sla === "Met") grouped.Met += 1;
         if (sla === "Breached") grouped.Breached += 1;
-
       });
 
       if (!hasSLA) {
@@ -468,9 +439,8 @@ AND status NOT IN ("Canceled")`;
 
       setSlaData([
         { label: "Tickets Closed within SLA", count: grouped.Met },
-        { label: "Tickets Closed outside of SLA", count: grouped.Breached }
+        { label: "Tickets Closed outside of SLA", count: grouped.Breached },
       ]);
-
     } catch (error) {
       console.error("Error fetching SLA data:", error);
     }
@@ -493,54 +463,53 @@ AND status NOT IN ("Canceled")`;
   const totalJiraUrl = `/issues/?jql=${encodedTotalJql}`;
 
   const chartStyle = {
-    maxWidth: '600px',
-    marginTop: '24px',
+    maxWidth: "600px",
+    marginTop: "24px",
   };
 
   const barContainerStyle = {
-    display: 'flex',
-    alignItems: 'flex-end',
-    gap: '24px',
-    height: '200px',
-    padding: '16px 16px 40px 16px', // Top, right, bottom (extra for labels), left
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    backgroundColor: '#f5f5f5',
-    boxSizing: 'border-box',
+    display: "flex",
+    alignItems: "flex-end",
+    gap: "24px",
+    height: "200px",
+    padding: "16px 16px 40px 16px", // Top, right, bottom (extra for labels), left
+    border: "1px solid #ddd",
+    borderRadius: "4px",
+    backgroundColor: "#f5f5f5",
+    boxSizing: "border-box",
   };
 
   const barStyle = (value) => {
     const availableHeight = 200 - 32; // Container height minus padding
     const barHeight = (value / maxCount) * availableHeight;
     return {
-      width: '60px', // Fixed width for bars
+      width: "60px", // Fixed width for bars
       height: `${barHeight}px`,
-      backgroundColor: '#0052CC',
-      borderRadius: '4px 4px 0 0',
-      minHeight: '20px',
-      display: 'flex',
-      alignItems: 'flex-end',
-      justifyContent: 'center',
-      paddingBottom: '8px',
-      color: 'white',
-      fontWeight: 'bold',
+      backgroundColor: "#0052CC",
+      borderRadius: "4px 4px 0 0",
+      minHeight: "20px",
+      display: "flex",
+      alignItems: "flex-end",
+      justifyContent: "center",
+      paddingBottom: "8px",
+      color: "white",
+      fontWeight: "bold",
     };
   };
 
   const buttonStyle = (isSelected) => ({
-    padding: '8px 16px',
-    marginRight: '8px',
-    backgroundColor: isSelected ? '#0052CC' : 'transparent',
-    color: isSelected ? 'white' : 'inherit',
-    border: '1px solid #0052CC',
-    borderRadius: '3px',
-    cursor: 'pointer',
-    fontSize: '14px',
+    padding: "8px 16px",
+    marginRight: "8px",
+    backgroundColor: isSelected ? "#0052CC" : "transparent",
+    color: isSelected ? "white" : "inherit",
+    border: "1px solid #0052CC",
+    borderRadius: "3px",
+    cursor: "pointer",
+    fontSize: "14px",
   });
 
   // Function to determine status color based on name and category
   const getStatusColor = (status, category) => {
-
     const name = status.toLowerCase();
 
     if (name.includes("cancel")) {
@@ -586,9 +555,11 @@ AND status NOT IN ("Canceled")`;
   }, []);
 
   return (
-    <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>
+    <div style={{ padding: "32px", maxWidth: "1200px", margin: "0 auto" }}>
+      <div style={{ marginBottom: "32px" }}>
+        <h1
+          style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}
+        >
           Select Date Range & Project
         </h1>
         <div style={{ marginBottom: "24px" }}>
@@ -623,9 +594,9 @@ AND status NOT IN ("Canceled")`;
             onClick={() => {
               setTickets([]);
               setNextPageToken(null);
-              fetchTotalTickets(); 
-              fetchIssueData();   // date chart
-              fetchStatusData();  // status donut
+              fetchTotalTickets();
+              fetchIssueData(); // date chart
+              fetchStatusData(); // status donut
               fetchOpenTickets();
               fetchSLAData();
               setTotalTickets(0);
@@ -636,7 +607,7 @@ AND status NOT IN ("Canceled")`;
               color: "white",
               border: "none",
               borderRadius: "4px",
-              cursor: "pointer"
+              cursor: "pointer",
             }}
           >
             Apply
@@ -658,7 +629,6 @@ AND status NOT IN ("Canceled")`;
 
           {statusData.length > 0 && (
             <div style={{ display: "flex", gap: "40px", alignItems: "center" }}>
-
               {/* Donut Chart */}
               <svg width="200" height="200" viewBox="0 0 200 200">
                 <g transform="rotate(-90 100 100)">
@@ -683,7 +653,7 @@ AND status NOT IN ("Canceled")`;
                         strokeLinecap="butt"
                         style={{
                           cursor: "pointer",
-                          pointerEvents: "visibleStroke"
+                          pointerEvents: "visibleStroke",
                         }}
                         onClick={() => {
                           let jql = `status = "${item.status}" AND created >= "${fromDate}" AND created <= "${toDate} 23:59"`;
@@ -692,7 +662,9 @@ AND status NOT IN ("Canceled")`;
                             jql += ` AND project = "${selectedProject}"`;
                           }
 
-                          router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
+                          router.open(
+                            `/issues/?jql=${encodeURIComponent(jql)}`,
+                          );
                         }}
                       />
                     );
@@ -731,7 +703,7 @@ AND status NOT IN ("Canceled")`;
                     "#FFAB00",
                     "#FF5630",
                     "#6554C0",
-                    "#00B8D9"
+                    "#00B8D9",
                   ];
 
                   const percent = ((item.count / total) * 100).toFixed(1);
@@ -750,15 +722,18 @@ AND status NOT IN ("Canceled")`;
                         display: "flex",
                         alignItems: "center",
                         marginBottom: "8px",
-                        cursor: "pointer"
+                        cursor: "pointer",
                       }}
                     >
                       <div
                         style={{
                           width: "14px",
                           height: "14px",
-                          backgroundColor: getStatusColor(item.status, item.category),
-                          marginRight: "8px"
+                          backgroundColor: getStatusColor(
+                            item.status,
+                            item.category,
+                          ),
+                          marginRight: "8px",
                         }}
                       />
 
@@ -766,7 +741,7 @@ AND status NOT IN ("Canceled")`;
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
-                          width: "160px"
+                          width: "160px",
                         }}
                       >
                         <span>{item.status}</span>
@@ -786,220 +761,224 @@ AND status NOT IN ("Canceled")`;
             width: "1px",
             backgroundColor: "#DFE1E6",
             margin: "0 40px",
-            height: "260px"
+            height: "260px",
           }}
         />
 
         <div style={{ minWidth: "320px" }}>
-          <h2 style={{ marginBottom: "10px" }}>
-            Active Tickets by Status
-          </h2>
+          <h2 style={{ marginBottom: "10px" }}>Active Tickets by Status</h2>
 
           <p style={{ color: "#6B778C", marginBottom: "20px" }}>
             (All tickets irrespective of date range)
           </p>
-          {openStatusData.length > 0 && (() => {
-            const total = openStatusData.reduce((sum, i) => sum + i.count, 0);
-            const radius = 80;
-            const circumference = 2 * Math.PI * radius;
-            let cumulative = 0;
+          {openStatusData.length > 0 &&
+            (() => {
+              const total = openStatusData.reduce((sum, i) => sum + i.count, 0);
+              const radius = 80;
+              const circumference = 2 * Math.PI * radius;
+              let cumulative = 0;
 
-            const getDynamicColor = (index) => {
-              const colors = [
-                "#0052CC",
-                "#36B37E",
-                "#FF8C00",
-                "#6554C0",
-                "#00B8D9",
-                "#FF5630"
-              ];
-              return colors[index % colors.length];
-            };
+              const getDynamicColor = (index) => {
+                const colors = [
+                  "#0052CC",
+                  "#36B37E",
+                  "#FF8C00",
+                  "#6554C0",
+                  "#00B8D9",
+                  "#FF5630",
+                ];
+                return colors[index % colors.length];
+              };
 
-            return (
-              <div style={{ display: "flex", gap: "40px", alignItems: "center" }}>
-                <svg width="200" height="200" viewBox="0 0 200 200">
-                  <g transform="rotate(-90 100 100)">
-                    {[...openStatusData].reverse().map((item, index) => {
-                      const percent = total === 0 ? 0 : item.count / total;
-                      const dash = `${percent * circumference} ${circumference}`;
-                      const offset = -cumulative * circumference;
+              return (
+                <div
+                  style={{ display: "flex", gap: "40px", alignItems: "center" }}
+                >
+                  <svg width="200" height="200" viewBox="0 0 200 200">
+                    <g transform="rotate(-90 100 100)">
+                      {[...openStatusData].reverse().map((item, index) => {
+                        const percent = total === 0 ? 0 : item.count / total;
+                        const dash = `${percent * circumference} ${circumference}`;
+                        const offset = -cumulative * circumference;
 
-                      cumulative += percent;
+                        cumulative += percent;
 
-                      return (
-                        <circle
-                          key={index}
-                          r={radius}
-                          cx="100"
-                          cy="100"
-                          fill="transparent"
-                          stroke={getStatusColor(item.label, item.category)}
-                          strokeWidth="30"
-                          strokeDasharray={dash}
-                          strokeDashoffset={offset}
-                          strokeLinecap="butt"
+                        return (
+                          <circle
+                            key={index}
+                            r={radius}
+                            cx="100"
+                            cy="100"
+                            fill="transparent"
+                            stroke={getStatusColor(item.label, item.category)}
+                            strokeWidth="30"
+                            strokeDasharray={dash}
+                            strokeDashoffset={offset}
+                            strokeLinecap="butt"
+                            style={{
+                              cursor: "pointer",
+                              pointerEvents: "visibleStroke",
+                            }}
+                            onClick={() => {
+                              let jql = `status = "${item.label}"`;
+                              if (selectedProject) {
+                                jql += ` AND project = "${selectedProject}"`;
+                              }
+
+                              router.open(
+                                `/issues/?jql=${encodeURIComponent(jql)}`,
+                              );
+                            }}
+                          />
+                        );
+                      })}
+                    </g>
+
+                    {/* Center Text */}
+                    <text
+                      x="100"
+                      y="100"
+                      textAnchor="middle"
+                      fontSize="22"
+                      fontWeight="bold"
+                    >
+                      {total}
+                    </text>
+                  </svg>
+
+                  {/* Legend */}
+                  <div>
+                    {openStatusData.map((item, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <div
                           style={{
-                            cursor: "pointer",
-                            pointerEvents: "visibleStroke"
-                          }}
-                          onClick={() => {
-                            let jql = `status = "${item.label}"`;
-                            if (selectedProject) {
-                              jql += ` AND project = "${selectedProject}"`;
-                            }
-
-                            router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
+                            width: "14px",
+                            height: "14px",
+                            backgroundColor: getStatusColor(
+                              item.label,
+                              item.category,
+                            ),
+                            marginRight: "8px",
                           }}
                         />
-                      );
-                    })}
-                  </g>
-
-                  {/* Center Text */}
-                  <text
-                    x="100"
-                    y="100"
-                    textAnchor="middle"
-                    fontSize="22"
-                    fontWeight="bold"
-                  >
-                    {total}
-                  </text>
-                </svg>
-
-                {/* Legend */}
-                <div>
-                  {openStatusData.map((item, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        marginBottom: "8px"
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "14px",
-                          height: "14px",
-                          backgroundColor: getStatusColor(item.label, item.category),
-                          marginRight: "8px"
-                        }}
-                      />
-                      <span>{item.label}: {item.count}</span>
-                    </div>
-                  ))}
+                        <span>
+                          {item.label}: {item.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })()}
+              );
+            })()}
         </div>
       </div>
       <div>
-         <h2 style={{ marginBottom: "20px" }}>SLA Performance</h2>
+        <h2 style={{ marginBottom: "20px" }}>SLA Performance</h2>
 
-          <div
-            style={{
-              border: "1px solid #DFE1E6",
-              borderRadius: "10px",
-              padding: "20px",
-              backgroundColor: "#F4F5F7",
-              width: "260px"
-            }}
-          >
-
-            {slaData.length === 1 && slaData[0].count === null ? (
-
-              <div
-                style={{
-                  textAlign: "center",
-                  color: "#6B778C",
-                  fontWeight: "500",
-                  fontSize: "16px"
-                }}
-              >
-                No SLA Tracked
-              </div>
-
-            ) : (
-
-              slaData.map((item, index) => {
-
-                let jql = `"SLA Status" = "${item.label.includes("within") ? "Met" : "Breached"}"
+        <div
+          style={{
+            border: "1px solid #DFE1E6",
+            borderRadius: "10px",
+            padding: "20px",
+            backgroundColor: "#F4F5F7",
+            width: "260px",
+          }}
+        >
+          {slaData.length === 1 && slaData[0].count === null ? (
+            <div
+              style={{
+                textAlign: "center",
+                color: "#6B778C",
+                fontWeight: "500",
+                fontSize: "16px",
+              }}
+            >
+              No SLA Tracked
+            </div>
+          ) : (
+            slaData.map((item, index) => {
+              let jql = `"SLA Status" = "${item.label.includes("within") ? "Met" : "Breached"}"
 AND statusCategory = Done 
 AND status NOT IN ("Canceled")`;
 
-                if (fromDate && toDate) {
-                  jql += ` AND created >= "${fromDate}" AND created <= "${toDate} 23:59"`;
-                }
+              if (fromDate && toDate) {
+                jql += ` AND created >= "${fromDate}" AND created <= "${toDate} 23:59"`;
+              }
 
-                if (selectedProject) {
-                  jql += ` AND project = "${selectedProject}"`;
-                }
+              if (selectedProject) {
+                jql += ` AND project = "${selectedProject}"`;
+              }
 
-                const encodedJql = encodeURIComponent(jql);
-                const jiraUrl = `/issues/?jql=${encodedJql}`;
+              const encodedJql = encodeURIComponent(jql);
+              const jiraUrl = `/issues/?jql=${encodedJql}`;
 
-                return (
+              return (
+                <div
+                  key={index}
+                  onClick={() => router.open(jiraUrl)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: "10px",
+                    cursor: "pointer",
+                  }}
+                >
                   <div
-                    key={index}
-                    onClick={() => router.open(jiraUrl)}
+                    style={{
+                      width: "14px",
+                      height: "14px",
+                      backgroundColor: item.label.includes("within")
+                        ? "#36B37E"
+                        : "#EA3680",
+                      marginRight: "8px",
+                    }}
+                  />
+
+                  <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
-                      marginBottom: "10px",
-                      cursor: "pointer"
+                      justifyContent: "space-between",
+                      width: "245px",
+                      fontSize: "16px",
+                      fontWeight: "500",
                     }}
                   >
-                    <div
-                      style={{
-                        width: "14px",
-                        height: "14px",
-                        backgroundColor: item.label.includes("within") ? "#36B37E" : "#EA3680",
-                        marginRight: "8px"
-                      }}
-                    />
-
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        width: "245px",
-                        fontSize: "16px",
-                        fontWeight: "500"
-                      }}
-                    >
-                      <span>{item.label}</span>
-                      <span>{item.count}</span>
-                    </div>
+                    <span>{item.label}</span>
+                    <span>{item.count}</span>
                   </div>
-                );
-
-              })
-
-            )}
-
-          </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
       {/* Date-wise Chart */}
       <div>
         <h2 style={{ marginBottom: "20px" }}>Tickets by Created Date</h2>
 
-        <div style={{
-          display: "flex",
-          alignItems: "flex-end",
-          gap: "12px",
-          height: "220px",
-          padding: "20px 16px 40px 16px",
-          border: "1px solid #ddd",
-          borderRadius: "6px",
-          background: "#f4f5f7",
-          overflowX: "auto"
-        }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+            gap: "12px",
+            height: "220px",
+            padding: "20px 16px 40px 16px",
+            border: "1px solid #ddd",
+            borderRadius: "6px",
+            background: "#f4f5f7",
+            overflowX: "auto",
+          }}
+        >
           {chartData.map((item, index) => {
             const chartHeight = 160;
-            const barHeight = (item.count / maxCount) * chartHeight
+            const barHeight = (item.count / maxCount) * chartHeight;
 
             // Build JQL for that specific date
             const nextDate = new Date(item.date);
@@ -1013,27 +992,31 @@ AND status NOT IN ("Canceled")`;
             const encodedJql = encodeURIComponent(jql);
             const jiraUrl = `/issues/?jql=${encodedJql}`;
             return (
-              <div key={index} style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                minWidth: "60px",
-                cursor: "pointer"
-              }}
+              <div
+                key={index}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  minWidth: "60px",
+                  cursor: "pointer",
+                }}
                 onClick={() => router.open(jiraUrl)}
               >
-                <div style={{
-                  height: `${Math.max(barHeight, 8)}px`,
-                  width: "40px",
-                  backgroundColor: "#2E8B57",
-                  borderRadius: "4px 4px 0 0",
-                  display: "flex",
-                  alignItems: "flex-end",
-                  justifyContent: "center",
-                  color: "white",
-                  fontSize: "9px",
-                  paddingBottom: "0px"
-                }}>
+                <div
+                  style={{
+                    height: `${Math.max(barHeight, 8)}px`,
+                    width: "40px",
+                    backgroundColor: "#2E8B57",
+                    borderRadius: "4px 4px 0 0",
+                    display: "flex",
+                    alignItems: "flex-end",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "9px",
+                    paddingBottom: "0px",
+                  }}
+                >
                   {item.count}
                 </div>
                 <div style={{ fontSize: "11px", marginTop: "6px" }}>
@@ -1045,37 +1028,89 @@ AND status NOT IN ("Canceled")`;
         </div>
       </div>
 
-
-
       <div style={{ marginTop: "40px" }}>
-        <h2>Open  & In Progress Tickets</h2>
+        <h2>Open & In Progress Tickets</h2>
 
         {totalTickets > 0 && (
-          <div style={{ marginTop: "10px", marginBottom: "10px", fontWeight: "500" }}>
+          <div
+            style={{
+              marginTop: "10px",
+              marginBottom: "10px",
+              fontWeight: "500",
+            }}
+          >
             Showing {issues.length} of {totalTickets} tickets
           </div>
         )}
 
-        <table style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          marginTop: "10px",
-          tableLayout: "fixed"
-        }}>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            marginTop: "10px",
+            tableLayout: "fixed",
+          }}
+        >
           <thead>
             <tr style={{ background: "#f4f5f7" }}>
-              <th style={{ padding: "8px", border: "1px solid #ddd", width: "90px"  }}>Key</th>
-              <th style={{ padding: "8px", border: "1px solid #ddd", width: "55%" }}>Summary</th>
-              <th style={{ padding: "8px", border: "1px solid #ddd", width: "140px" }}>Status</th>
-              <th style={{ padding: "8px", border: "1px solid #ddd", width: "150px" }}>Assignee</th>
-              <th style={{ padding: "8px", border: "1px solid #ddd", width: "130px" }}>Created</th>
+              <th
+                style={{
+                  padding: "8px",
+                  border: "1px solid #ddd",
+                  width: "90px",
+                }}
+              >
+                Key
+              </th>
+              <th
+                style={{
+                  padding: "8px",
+                  border: "1px solid #ddd",
+                  width: "55%",
+                }}
+              >
+                Summary
+              </th>
+              <th
+                style={{
+                  padding: "8px",
+                  border: "1px solid #ddd",
+                  width: "140px",
+                }}
+              >
+                Status
+              </th>
+              <th
+                style={{
+                  padding: "8px",
+                  border: "1px solid #ddd",
+                  width: "150px",
+                }}
+              >
+                Assignee
+              </th>
+              <th
+                style={{
+                  padding: "8px",
+                  border: "1px solid #ddd",
+                  width: "130px",
+                }}
+              >
+                Created
+              </th>
             </tr>
           </thead>
 
           <tbody>
-            {issues.map(issue => (
+            {issues.map((issue) => (
               <tr key={issue.id}>
-                <td style={{ padding: "8px", border: "1px solid #ddd",whiteSpace: "nowrap" }}>
+                <td
+                  style={{
+                    padding: "8px",
+                    border: "1px solid #ddd",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   <a
                     href={`/browse/${issue.key}`}
                     onClick={(e) => {
@@ -1087,11 +1122,25 @@ AND status NOT IN ("Canceled")`;
                   </a>
                 </td>
 
-                <td style={{ padding: "8px", border: "1px solid #ddd",whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <td
+                  style={{
+                    padding: "8px",
+                    border: "1px solid #ddd",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
                   {issue.fields.summary}
                 </td>
 
-                <td style={{ padding: "8px", border: "1px solid #ddd" ,whiteSpace: "nowrap"}}>
+                <td
+                  style={{
+                    padding: "8px",
+                    border: "1px solid #ddd",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {issue.fields.status.name}
                 </td>
 
@@ -1123,7 +1172,7 @@ AND status NOT IN ("Canceled")`;
               color: "white",
               border: "none",
               borderRadius: "4px",
-              cursor: nextPageToken ? "pointer" : "not-allowed"
+              cursor: nextPageToken ? "pointer" : "not-allowed",
             }}
           >
             {nextPageToken ? "Load More" : "No More Tickets"}
