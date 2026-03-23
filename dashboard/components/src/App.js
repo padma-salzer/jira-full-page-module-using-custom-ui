@@ -20,13 +20,13 @@ const App = () => {
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState("PHD");
   const [statusData, setStatusData] = useState([]);
-  const [issues, setIssues] = useState([]);
+  const [issues, setTickets] = useState([]);
   const [nextPageToken, setNextPageToken] = useState(null);
-  const [totalIssues, setTotalIssues] = useState(0);
+  const [totalTickets, setTotalTickets] = useState(0);
   const [statusFilter, setStatusFilter] = useState("");
   const [slaData, setSlaData] = useState([]);
   const [openStatusData, setOpenStatusData] = useState([]);
-  //const [totalStatusIssues, setTotalStatusIssues] = useState(0);
+  //const [totalStatusTickets, setTotalStatusTickets] = useState(0);
 
   const pageSize = 10;
 
@@ -50,7 +50,7 @@ AND status NOT IN ("Closed","Resolved","Canceled")
         jql += ` AND project = "${selectedProject}"`;
       }
 
-      let allIssues = [];
+      let allTickets = [];
       let nextPageToken = null;
 
       do {
@@ -76,7 +76,7 @@ AND status NOT IN ("Closed","Resolved","Canceled")
         const data = await response.json();
         if (!data.issues) break;
 
-        allIssues = [...allIssues, ...data.issues];
+        allTickets = [...allTickets, ...data.issues];
         nextPageToken = data.nextPageToken;
 
       } while (nextPageToken);
@@ -84,21 +84,28 @@ AND status NOT IN ("Closed","Resolved","Canceled")
       // Dynamic grouping
       const grouped = {};
 
-      allIssues.forEach(issue => {
+      allTickets.forEach(issue => {
         const status = issue.fields.status.name;
+        const category = issue.fields.status.statusCategory.name;
 
         if (!grouped[status]) {
-          grouped[status] = 0;
+          grouped[status] = {
+            count: 0,
+            category
+          };
         }
 
-        grouped[status] += 1;
+        grouped[status].count += 1;
       });
 
       const formatted = Object.keys(grouped).map(status => ({
         label: status,
-        count: grouped[status]
+        count: grouped[status].count,
+        category: grouped[status].category
       }));
+
       formatted.sort((a, b) => b.count - a.count);
+
       setOpenStatusData(formatted);
 
     } catch (error) {
@@ -127,7 +134,7 @@ AND status NOT IN ("Closed","Resolved","Canceled")
         jql += ` AND project = "${selectedProject}"`;
       }
 
-      let allIssues = [];
+      let allTickets = [];
       let nextPageToken = null;
 
       do {
@@ -155,7 +162,7 @@ AND status NOT IN ("Closed","Resolved","Canceled")
 
         if (!data.issues) break;
 
-        allIssues = [...allIssues, ...data.issues];
+        allTickets = [...allTickets, ...data.issues];
         nextPageToken = data.nextPageToken;
 
       } while (nextPageToken);
@@ -164,7 +171,7 @@ AND status NOT IN ("Closed","Resolved","Canceled")
       // Group by Date
       const grouped = {};
 
-      allIssues.forEach(issue => {
+      allTickets.forEach(issue => {
 
         const date = new Date(issue.fields.created)
           .toLocaleDateString("en-CA");
@@ -225,7 +232,7 @@ AND status NOT IN ("Closed","Resolved","Canceled")
 
       console.log("Status JQL:", jql);
 
-      let allIssues = [];
+      let allTickets = [];
       let nextPageToken = null;
 
       do {
@@ -255,7 +262,7 @@ AND status NOT IN ("Closed","Resolved","Canceled")
           return;
         }
 
-        allIssues = [...allIssues, ...data.issues];
+        allTickets = [...allTickets, ...data.issues];
         nextPageToken = data.nextPageToken;
 
       } while (nextPageToken);
@@ -263,7 +270,7 @@ AND status NOT IN ("Closed","Resolved","Canceled")
       // Group by status
       const grouped = {};
 
-      allIssues.forEach(issue => {
+      allTickets.forEach(issue => {
         const statusName = issue.fields.status.name;
         const category = issue.fields.status.statusCategory.name;
 
@@ -293,7 +300,7 @@ AND status NOT IN ("Closed","Resolved","Canceled")
   };
 
   // Total Count
-  const fetchTotalIssues = async () => {
+  const fetchTotalTickets = async () => {
     try {
 
       let jql = `created >= "${fromDate}" 
@@ -319,10 +326,10 @@ AND statusCategory IN ("To Do","In Progress")`;
 
       const data = await response.json();
 
-      console.log("Total Issues Response:", data);
+      console.log("Total Tickets Response:", data);
 
       if (data.total !== undefined) {
-        setTotalIssues(data.total);
+        setTotalTickets(data.total);
       }
 
     } catch (error) {
@@ -331,7 +338,7 @@ AND statusCategory IN ("To Do","In Progress")`;
   };
 
   // list view
-  const fetchOpenIssues = async (token = null) => {
+  const fetchOpenTickets = async (token = null) => {
 
     try {
 
@@ -364,11 +371,11 @@ AND statusCategory IN ("To Do","In Progress")`;
 
       const data = await response.json();
 
-      setIssues(prev => [...prev, ...(data.issues || [])]);
+      setTickets(prev => [...prev, ...(data.issues || [])]);
 
       setNextPageToken(data.nextPageToken || null);
 
-      setTotalIssues(data.total || 0);
+      setTotalTickets(data.total || 0);
 
     } catch (error) {
       console.error("Error fetching issues:", error);
@@ -392,7 +399,7 @@ AND status NOT IN ("Canceled")`;
         jql += ` AND project = "${selectedProject}"`;
       }
 
-      let allIssues = [];
+      let allTickets = [];
       let nextPageToken = null;
 
       do {
@@ -420,12 +427,12 @@ AND status NOT IN ("Canceled")`;
 
         if (!data.issues) break;
 
-        allIssues = [...allIssues, ...data.issues];
+        allTickets = [...allTickets, ...data.issues];
         nextPageToken = data.nextPageToken;
 
       } while (nextPageToken);
 
-      if (allIssues.length === 0) {
+      if (allTickets.length === 0) {
         setSlaData([{ label: "No SLA Tracked", count: null }]);
         return;
       }
@@ -437,7 +444,7 @@ AND status NOT IN ("Canceled")`;
 
       let hasSLA = false;
 
-      allIssues.forEach(issue => {
+      allTickets.forEach(issue => {
 
         const slaField = issue.fields?.["customfield_10273"];
         if (!slaField) return;
@@ -460,8 +467,8 @@ AND status NOT IN ("Canceled")`;
       }
 
       setSlaData([
-        { label: "Issues Closed within SLA", count: grouped.Met },
-        { label: "Issues Closed outside of SLA", count: grouped.Breached }
+        { label: "Tickets Closed within SLA", count: grouped.Met },
+        { label: "Tickets Closed outside of SLA", count: grouped.Breached }
       ]);
 
     } catch (error) {
@@ -470,7 +477,7 @@ AND status NOT IN ("Canceled")`;
   };
 
   const total = statusData.reduce((sum, item) => sum + item.count, 0);
-  //const total = totalStatusIssues;
+  //const total = totalStatusTickets;
   const radius = 80;
   const circumference = 2 * Math.PI * radius;
   let cumulativePercent = 0;
@@ -570,10 +577,10 @@ AND status NOT IN ("Canceled")`;
   // Automatically fetch data on initial load
   useEffect(() => {
     if (selectedProject && fromDate && toDate) {
-      fetchTotalIssues();
+      fetchTotalTickets();
       fetchIssueData();
       fetchStatusData();
-      fetchOpenIssues();
+      fetchOpenTickets();
       fetchSLAData();
     }
   }, []);
@@ -581,126 +588,6 @@ AND status NOT IN ("Canceled")`;
   return (
     <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '32px' }}>
-        <h2 style={{ marginBottom: "10px" }}>
-          Active Issues by Status
-        </h2>
-
-        <p style={{ color: "#6B778C", marginBottom: "20px" }}>
-          (All tickets irrespective of date range)
-        </p>
-
-        {/* Project Dropdown (optional if already present) */}
-        <select
-          value={selectedProject}
-          onChange={(e) => setSelectedProject(e.target.value)}
-          style={{ marginBottom: "20px", padding: "6px" }}
-        >
-          <option value="">All Projects</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.key}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-
-        {openStatusData.length > 0 && (() => {
-          const total = openStatusData.reduce((sum, i) => sum + i.count, 0);
-          const radius = 80;
-          const circumference = 2 * Math.PI * radius;
-          let cumulative = 0;
-
-          const getDynamicColor = (index) => {
-            const colors = [
-              "#0052CC",
-              "#36B37E",
-              "#FF8C00",
-              "#6554C0",
-              "#00B8D9",
-              "#FF5630"
-            ];
-            return colors[index % colors.length];
-          };
-
-          return (
-            <div style={{ display: "flex", gap: "40px", alignItems: "center" }}>
-              <svg width="200" height="200" viewBox="0 0 200 200">
-                <g transform="rotate(-90 100 100)">
-                  {[...openStatusData].reverse().map((item, index) => {
-                    const percent = total === 0 ? 0 : item.count / total;
-                    const dash = `${percent * circumference} ${circumference}`;
-                    const offset = -cumulative * circumference;
-
-                    cumulative += percent;
-
-                    return (
-                      <circle
-                        key={index}
-                        r={radius}
-                        cx="100"
-                        cy="100"
-                        fill="transparent"
-                        stroke={getDynamicColor(index)}
-                        strokeWidth="30"
-                        strokeDasharray={dash}
-                        strokeDashoffset={offset}
-                        strokeLinecap="butt"
-                        style={{
-                          cursor: "pointer",
-                          pointerEvents: "visibleStroke"
-                        }}
-                        onClick={() => {
-                          let jql = `status = "${item.label}"`;
-                          if (selectedProject) {
-                            jql += ` AND project = "${selectedProject}"`;
-                          }
-
-                          router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
-                        }}
-                      />
-                    );
-                  })}
-                </g>
-
-                {/* Center Text */}
-                <text
-                  x="100"
-                  y="100"
-                  textAnchor="middle"
-                  fontSize="22"
-                  fontWeight="bold"
-                >
-                  {total}
-                </text>
-              </svg>
-
-              {/* Legend */}
-              <div>
-                {openStatusData.map((item, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      marginBottom: "8px"
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "14px",
-                        height: "14px",
-                        backgroundColor: getDynamicColor(index),
-                        marginRight: "8px"
-                      }}
-                    />
-                    <span>{item.label}: {item.count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-
-        <hr style={{ margin: "40px 0", borderColor: "#DFE1E6" }} />
         <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>
           Select Date Range & Project
         </h1>
@@ -734,14 +621,14 @@ AND status NOT IN ("Canceled")`;
 
           <button
             onClick={() => {
-              setIssues([]);
+              setTickets([]);
               setNextPageToken(null);
-              fetchTotalIssues(); 
+              fetchTotalTickets(); 
               fetchIssueData();   // date chart
               fetchStatusData();  // status donut
-              fetchOpenIssues();
+              fetchOpenTickets();
               fetchSLAData();
-              setTotalIssues(0);
+              setTotalTickets(0);
             }}
             style={{
               padding: "8px 16px",
@@ -756,16 +643,16 @@ AND status NOT IN ("Canceled")`;
           </button>
         </div>
       </div>
-
+      <hr style={{ margin: "40px 0", borderColor: "#DFE1E6" }} />
       {chartData.length === 0 && (
         <p style={{ marginTop: "16px" }}>
-          No issues found for selected date range.
+          No tickets found for selected date range.
         </p>
       )}
 
-      <div style={{ display: "flex", gap: "80px", alignItems: "flex-start" }}>
+      <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
         <div>
-          <h2 style={{ marginBottom: "20px" }}>Status of Issues Created</h2>
+          <h2 style={{ marginBottom: "20px" }}>Status of Tickets Created</h2>
 
           {statusData.length === 0 && <p>No data available</p>}
 
@@ -831,7 +718,7 @@ AND status NOT IN ("Canceled")`;
                   fontSize="12"
                   fill="#6B778C"
                 >
-                  Total Issues
+                  Total Tickets
                 </text>
               </svg>
 
@@ -904,7 +791,113 @@ AND status NOT IN ("Canceled")`;
         />
 
         <div style={{ minWidth: "320px" }}>
-          <h2 style={{ marginBottom: "20px" }}>SLA Performance</h2>
+          <h2 style={{ marginBottom: "10px" }}>
+            Active Tickets by Status
+          </h2>
+
+          <p style={{ color: "#6B778C", marginBottom: "20px" }}>
+            (All tickets irrespective of date range)
+          </p>
+          {openStatusData.length > 0 && (() => {
+            const total = openStatusData.reduce((sum, i) => sum + i.count, 0);
+            const radius = 80;
+            const circumference = 2 * Math.PI * radius;
+            let cumulative = 0;
+
+            const getDynamicColor = (index) => {
+              const colors = [
+                "#0052CC",
+                "#36B37E",
+                "#FF8C00",
+                "#6554C0",
+                "#00B8D9",
+                "#FF5630"
+              ];
+              return colors[index % colors.length];
+            };
+
+            return (
+              <div style={{ display: "flex", gap: "40px", alignItems: "center" }}>
+                <svg width="200" height="200" viewBox="0 0 200 200">
+                  <g transform="rotate(-90 100 100)">
+                    {[...openStatusData].reverse().map((item, index) => {
+                      const percent = total === 0 ? 0 : item.count / total;
+                      const dash = `${percent * circumference} ${circumference}`;
+                      const offset = -cumulative * circumference;
+
+                      cumulative += percent;
+
+                      return (
+                        <circle
+                          key={index}
+                          r={radius}
+                          cx="100"
+                          cy="100"
+                          fill="transparent"
+                          stroke={getStatusColor(item.label, item.category)}
+                          strokeWidth="30"
+                          strokeDasharray={dash}
+                          strokeDashoffset={offset}
+                          strokeLinecap="butt"
+                          style={{
+                            cursor: "pointer",
+                            pointerEvents: "visibleStroke"
+                          }}
+                          onClick={() => {
+                            let jql = `status = "${item.label}"`;
+                            if (selectedProject) {
+                              jql += ` AND project = "${selectedProject}"`;
+                            }
+
+                            router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
+                          }}
+                        />
+                      );
+                    })}
+                  </g>
+
+                  {/* Center Text */}
+                  <text
+                    x="100"
+                    y="100"
+                    textAnchor="middle"
+                    fontSize="22"
+                    fontWeight="bold"
+                  >
+                    {total}
+                  </text>
+                </svg>
+
+                {/* Legend */}
+                <div>
+                  {openStatusData.map((item, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        marginBottom: "8px"
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "14px",
+                          height: "14px",
+                          backgroundColor: getStatusColor(item.label, item.category),
+                          marginRight: "8px"
+                        }}
+                      />
+                      <span>{item.label}: {item.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+      <div>
+         <h2 style={{ marginBottom: "20px" }}>SLA Performance</h2>
 
           <div
             style={{
@@ -988,11 +981,10 @@ AND status NOT IN ("Canceled")`;
             )}
 
           </div>
-        </div>
       </div>
       {/* Date-wise Chart */}
       <div>
-        <h2 style={{ marginBottom: "20px" }}>Issues by Created Date</h2>
+        <h2 style={{ marginBottom: "20px" }}>Tickets by Created Date</h2>
 
         <div style={{
           display: "flex",
@@ -1056,11 +1048,11 @@ AND status NOT IN ("Canceled")`;
 
 
       <div style={{ marginTop: "40px" }}>
-        <h2>Open  & In Progress Issues</h2>
+        <h2>Open  & In Progress Tickets</h2>
 
-        {totalIssues > 0 && (
+        {totalTickets > 0 && (
           <div style={{ marginTop: "10px", marginBottom: "10px", fontWeight: "500" }}>
-            Showing {issues.length} of {totalIssues} tickets
+            Showing {issues.length} of {totalTickets} tickets
           </div>
         )}
 
@@ -1117,14 +1109,14 @@ AND status NOT IN ("Canceled")`;
         <div style={{ marginTop: "10px", display: "flex", gap: "10px" }}>
           {/* <button
             disabled={startAt === 0}
-            onClick={() => fetchOpenIssues(startAt - pageSize)}
+            onClick={() => fetchOpenTickets(startAt - pageSize)}
           >
             Previous
           </button> */}
 
           <button
             disabled={!nextPageToken}
-            onClick={() => fetchOpenIssues(nextPageToken)}
+            onClick={() => fetchOpenTickets(nextPageToken)}
             style={{
               padding: "8px 16px",
               backgroundColor: "#0052CC",
@@ -1134,7 +1126,7 @@ AND status NOT IN ("Canceled")`;
               cursor: nextPageToken ? "pointer" : "not-allowed"
             }}
           >
-            {nextPageToken ? "Load More" : "No More Issues"}
+            {nextPageToken ? "Load More" : "No More Tickets"}
           </button>
         </div>
       </div>
