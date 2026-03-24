@@ -16,7 +16,7 @@ const App = () => {
   const [toDate, setToDate] = useState(formatDateForInput(today));
   const [chartData, setChartData] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [selectedProject, setSelectedProject] = useState("PHD");
+  const [selectedProject, setSelectedProject] = useState("");
   const [statusData, setStatusData] = useState([]);
   const [issues, setTickets] = useState([]);
   const [nextPageToken, setNextPageToken] = useState(null);
@@ -24,6 +24,12 @@ const App = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [slaData, setSlaData] = useState([]);
   const [openStatusData, setOpenStatusData] = useState([]);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const [projectStatusFilter, setProjectStatusFilter] = useState(["Active"]);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [allProjects, setAllProjects] = useState([]);
+  const [isProjectLoading, setIsProjectLoading] = useState(false);
+  const [error, setError] = useState("");
   //const [totalStatusTickets, setTotalStatusTickets] = useState(0);
 
   const pageSize = 10;
@@ -31,14 +37,21 @@ const App = () => {
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString("en-GB").replace(/\//g, "-");
   };
+
   const maxCount = Math.max(...chartData.map((item) => item.count), 1);
+
+  const handleProjectStatusChange = (status) => {
+    setProjectStatusFilter((prev) =>
+      prev.includes(status)
+        ? prev.filter((s) => s !== status)
+        : [...prev, status],
+    );
+  };
 
   // Function to handle status filter click for open issues
   const fetchOpenStatusSummary = async () => {
     try {
-      let jql = `
-        statusCategory != Done 
-        AND status NOT IN ("Closed","Resolved","Canceled")`;
+      let jql = `statusCategory != Done AND status NOT IN ("Closed","Resolved","Canceled")`;
 
       if (selectedProject) {
         jql += ` AND project = "${selectedProject}"`;
@@ -104,12 +117,6 @@ const App = () => {
       console.error(error);
     }
   };
-
-  useEffect(() => {
-    if (selectedProject) {
-      fetchOpenStatusSummary();
-    }
-  }, [selectedProject]);
 
   // Fetch issues based on date range and selected project
   const fetchIssueData = async () => {
@@ -179,29 +186,60 @@ const App = () => {
   };
 
   // Fetch list of projects for dropdown
-  const fetchProjects = async () => {
-    try {
-      const response = await requestJira(`/rest/api/3/project/search`, {
-        headers: { Accept: "application/json" },
-      });
+  useEffect(() => {
+    const loadProjects = async () => {
+      setIsProjectLoading(true);
 
-      const data = await response.json();
+      try {
+        const response = await requestJira(`/rest/api/3/project/search`, {
+          headers: { Accept: "application/json" },
+        });
 
-      // Filter only Active category projects
-      const activeProjects = (data.values || []).filter(
-        (project) =>
-          project.projectCategory && project.projectCategory.name === "Active",
-      );
+        const data = await response.json();
+        const projects = data.values || [];
 
-      setProjects(activeProjects);
-    } catch (error) {
-      console.error("Failed to fetch projects:", error);
-    }
-  };
+        setAllProjects(projects);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsProjectLoading(false);
+      }
+    };
+
+    loadProjects();
+  }, []);
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    if (!allProjects.length) return;
+
+    const filtered =
+      projectStatusFilter.length === 0
+        ? allProjects
+        : allProjects.filter((project) => {
+            const category = project.projectCategory?.name;
+            return category && projectStatusFilter.includes(category);
+          });
+
+    setProjects(filtered);
+
+    if (filtered.length > 0) {
+      setSelectedProject(filtered[0].key);
+    } else {
+      setSelectedProject("");
+    }
+  }, [projectStatusFilter, allProjects]);
+
+  useEffect(() => {
+    if (selectedProject && isFirstLoad) {
+      fetchTotalTickets();
+      fetchIssueData();
+      fetchStatusData();
+      fetchOpenTickets();
+      fetchSLAData();
+      fetchOpenStatusSummary();
+      setIsFirstLoad(false);
+    }
+  }, [selectedProject]);
 
   // Fetch issue counts by status for the selected date range and project
   const fetchStatusData = async () => {
@@ -216,8 +254,6 @@ const App = () => {
       if (selectedProject) {
         jql += ` AND project = "${selectedProject}"`;
       }
-
-      console.log("Status JQL:", jql);
 
       let allTickets = [];
       let nextPageToken = null;
@@ -287,9 +323,7 @@ const App = () => {
   // Total Count
   const fetchTotalTickets = async () => {
     try {
-      let jql = `created >= "${fromDate}" 
-        AND created <= "${toDate} 23:59" 
-        AND statusCategory IN ("To Do","In Progress")`;
+      let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59" AND statusCategory IN ("To Do","In Progress")`;
 
       if (selectedProject) {
         jql += ` AND project = "${selectedProject}"`;
@@ -323,9 +357,7 @@ const App = () => {
   // list view
   const fetchOpenTickets = async (token = null) => {
     try {
-      let jql = `created >= "${fromDate}" 
-        AND created <= "${toDate} 23:59" 
-        AND statusCategory IN ("To Do","In Progress")`;
+      let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59" AND statusCategory IN ("To Do","In Progress")`;
 
       if (selectedProject) {
         jql += ` AND project = "${selectedProject}"`;
@@ -367,10 +399,7 @@ const App = () => {
     setSlaData([]);
 
     try {
-      let jql = `created >= "${fromDate}"
-        AND created <= "${toDate} 23:59"
-        AND statusCategory = Done
-        AND status NOT IN ("Canceled")`;
+      let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59" AND statusCategory = Done AND status NOT IN ("Canceled")`;
 
       if (selectedProject) {
         jql += ` AND project = "${selectedProject}"`;
@@ -503,7 +532,7 @@ const App = () => {
     border: "1px solid #0052CC",
     borderRadius: "3px",
     cursor: "pointer",
-    fontSize: "14px",
+    fontSize: "15px",
   });
 
   // Function to determine status color based on name and category
@@ -541,17 +570,6 @@ const App = () => {
     return "#A5ADBA"; // fallback grey
   };
 
-  // Automatically fetch data on initial load
-  useEffect(() => {
-    if (selectedProject && fromDate && toDate) {
-      fetchTotalTickets();
-      fetchIssueData();
-      fetchStatusData();
-      fetchOpenTickets();
-      fetchSLAData();
-    }
-  }, []);
-
   const container = {
     padding: "0",
     maxWidth: "100%",
@@ -568,7 +586,7 @@ const App = () => {
   };
 
   const sectionTitle = {
-    fontSize: "18px",
+    fontSize: "19px",
     fontWeight: "600",
     marginBottom: "16px",
   };
@@ -590,14 +608,14 @@ const App = () => {
     textAlign: "left",
     borderBottom: "2px solid #DFE1E6",
     borderRight: "1px solid #DFE1E6",
-    fontSize: "13px",
+    fontSize: "14px",
     fontWeight: "600",
     color: "#172B4D",
   };
 
   const tdStyle = {
     padding: "10px",
-    fontSize: "13px",
+    fontSize: "14px",
     borderBottom: "1px solid #DFE1E6",
     borderRight: "1px solid #DFE1E6",
   };
@@ -608,6 +626,7 @@ const App = () => {
         padding: "16px 20px",
         minHeight: "100vh",
         boxSizing: "border-box",
+        fontSize: "15px",
       }}
     >
       {/* FILTER BAR */}
@@ -642,6 +661,73 @@ const App = () => {
             }}
           />
 
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowStatusDropdown((prev) => !prev)}
+              style={{
+                padding: "8px 12px",
+                border: "1px solid #ccc",
+                borderRadius: "6px",
+                background: "#fff",
+                cursor: "pointer",
+                minWidth: "160px",
+                textAlign: "left",
+              }}
+            >
+              Project Status
+              {projectStatusFilter.length > 0 && (
+                <span
+                  style={{
+                    marginLeft: "8px",
+                    background: "#0052CC",
+                    color: "#fff",
+                    borderRadius: "12px",
+                    padding: "2px 6px",
+                    fontSize: "12px",
+                  }}
+                >
+                  +{projectStatusFilter.length}
+                </span>
+              )}
+            </button>
+
+            {showStatusDropdown && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "40px",
+                  left: 0,
+                  background: "#fff",
+                  border: "1px solid #ccc",
+                  borderRadius: "6px",
+                  padding: "8px",
+                  zIndex: 10,
+                  width: "180px",
+                }}
+              >
+                {["Active", "Inactive", "Completed"].map((status) => (
+                  <label
+                    key={status}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "4px 0",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={projectStatusFilter.includes(status)}
+                      onChange={() => handleProjectStatusChange(status)}
+                    />
+                    {status}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
           <select
             value={selectedProject}
             onChange={(e) => setSelectedProject(e.target.value)}
@@ -651,16 +737,25 @@ const App = () => {
               border: "1px solid #ccc",
             }}
           >
-            <option value="">All Projects</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.key}>
-                {project.name}
-              </option>
-            ))}
+            {projects.length === 0 ? (
+              <option value="">No projects available</option>
+            ) : (
+              projects.map((project) => (
+                <option key={project.id} value={project.key}>
+                  {project.name}
+                </option>
+              ))
+            )}
           </select>
 
           <button
             onClick={() => {
+              if (!selectedProject) {
+                setError("No projects available for selected status");
+                return;
+              }
+
+              setError("");
               setTickets([]);
               setNextPageToken(null);
               fetchTotalTickets();
@@ -669,6 +764,13 @@ const App = () => {
               fetchOpenTickets();
               fetchSLAData();
               setTotalTickets(0);
+
+              fetchOpenStatusSummary();
+              fetchTotalTickets();
+              fetchIssueData();
+              fetchStatusData();
+              fetchOpenTickets();
+              fetchSLAData();
             }}
             style={{
               padding: "8px 18px",
@@ -683,6 +785,7 @@ const App = () => {
             Apply
           </button>
         </div>
+        {error && <div style={{ color: "red", marginTop: "8px" }}>{error}</div>}
       </div>
 
       {/* CHARTS ROW */}
@@ -752,7 +855,7 @@ const App = () => {
                   x="100"
                   y="120"
                   textAnchor="middle"
-                  fontSize="12"
+                  fontSize="14"
                   fill="#6B778C"
                 >
                   Total Tickets
@@ -781,7 +884,7 @@ const App = () => {
                         alignItems: "center",
                         marginBottom: "6px",
                         cursor: "pointer",
-                        fontSize: "13px",
+                        fontSize: "14px",
                         columnGap: "6px",
                       }}
                     >
@@ -901,8 +1004,7 @@ const App = () => {
                   fontWeight="600"
                   style={{ cursor: "pointer" }}
                   onClick={() => {
-                    let jql = `statusCategory != Done 
-                          AND status NOT IN ("Closed","Resolved","Canceled")`;
+                    let jql = `statusCategory != Done AND status NOT IN ("Closed","Resolved","Canceled")`;
 
                     if (selectedProject) {
                       jql += ` AND project = "${selectedProject}"`;
@@ -918,7 +1020,7 @@ const App = () => {
                   x="100"
                   y="120"
                   textAnchor="middle"
-                  fontSize="12"
+                  fontSize="14"
                   fill="#6B778C"
                 >
                   Total Active Tickets
@@ -953,7 +1055,7 @@ const App = () => {
                           alignItems: "center",
                           marginBottom: "6px",
                           cursor: "pointer",
-                          fontSize: "13px",
+                          fontSize: "14px",
                           columnGap: "6px",
                         }}
                       >
@@ -1069,7 +1171,7 @@ const App = () => {
                       alignItems: "flex-end",
                       justifyContent: "center",
                       color: "#fff",
-                      fontSize: "11px",
+                      fontSize: "12px",
                       fontWeight: "600",
                       paddingBottom: "4px",
                       boxSizing: "border-box",
@@ -1080,7 +1182,7 @@ const App = () => {
                   {/* DATE */}
                   <div
                     style={{
-                      fontSize: "11px",
+                      fontSize: "12px",
                       marginTop: "6px",
                       textAlign: "center",
                       whiteSpace: "nowrap",
