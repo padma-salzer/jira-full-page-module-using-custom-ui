@@ -37,9 +37,8 @@ const App = () => {
   const fetchOpenStatusSummary = async () => {
     try {
       let jql = `
-statusCategory != Done 
-AND status NOT IN ("Closed","Resolved","Canceled")
-`;
+        statusCategory != Done 
+        AND status NOT IN ("Closed","Resolved","Canceled")`;
 
       if (selectedProject) {
         jql += ` AND project = "${selectedProject}"`;
@@ -289,8 +288,8 @@ AND status NOT IN ("Closed","Resolved","Canceled")
   const fetchTotalTickets = async () => {
     try {
       let jql = `created >= "${fromDate}" 
-AND created <= "${toDate} 23:59" 
-AND statusCategory IN ("To Do","In Progress")`;
+        AND created <= "${toDate} 23:59" 
+        AND statusCategory IN ("To Do","In Progress")`;
 
       if (selectedProject) {
         jql += ` AND project = "${selectedProject}"`;
@@ -325,8 +324,8 @@ AND statusCategory IN ("To Do","In Progress")`;
   const fetchOpenTickets = async (token = null) => {
     try {
       let jql = `created >= "${fromDate}" 
-AND created <= "${toDate} 23:59" 
-AND statusCategory IN ("To Do","In Progress")`;
+        AND created <= "${toDate} 23:59" 
+        AND statusCategory IN ("To Do","In Progress")`;
 
       if (selectedProject) {
         jql += ` AND project = "${selectedProject}"`;
@@ -369,9 +368,9 @@ AND statusCategory IN ("To Do","In Progress")`;
 
     try {
       let jql = `created >= "${fromDate}"
-AND created <= "${toDate} 23:59"
-AND statusCategory = Done
-AND status NOT IN ("Canceled")`;
+        AND created <= "${toDate} 23:59"
+        AND statusCategory = Done
+        AND status NOT IN ("Canceled")`;
 
       if (selectedProject) {
         jql += ` AND project = "${selectedProject}"`;
@@ -450,7 +449,6 @@ AND status NOT IN ("Canceled")`;
   //const total = totalStatusTickets;
   const radius = 80;
   const circumference = 2 * Math.PI * radius;
-  let cumulativePercent = 0;
 
   // JQL for total donut click
   let totalJql = `created >= "${fromDate}" AND created <= "${toDate} 23:59"`;
@@ -554,33 +552,104 @@ AND status NOT IN ("Canceled")`;
     }
   }, []);
 
+  const container = {
+    padding: "0",
+    maxWidth: "100%",
+    margin: "10px",
+    background: "transparent",
+  };
+
+  const card = {
+    background: "#FFFFFF",
+    borderRadius: "8px",
+    padding: "16px",
+    border: "1px solid #DFE1E6",
+    boxShadow: "0 1px 2px rgba(9, 30, 66, 0.15)",
+  };
+
+  const sectionTitle = {
+    fontSize: "18px",
+    fontWeight: "600",
+    marginBottom: "16px",
+  };
+
+  const subText = {
+    color: "#6B778C",
+    fontSize: "13px",
+    marginBottom: "12px",
+  };
+
+  const divider = {
+    width: "1px",
+    backgroundColor: "#DFE1E6",
+    margin: "0 24px",
+  };
+
+  const thStyle = {
+    padding: "10px",
+    textAlign: "left",
+    borderBottom: "2px solid #DFE1E6",
+    borderRight: "1px solid #DFE1E6",
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "#172B4D",
+  };
+
+  const tdStyle = {
+    padding: "10px",
+    fontSize: "13px",
+    borderBottom: "1px solid #DFE1E6",
+    borderRight: "1px solid #DFE1E6",
+  };
+
   return (
-    <div style={{ padding: "32px", maxWidth: "1200px", margin: "0 auto" }}>
-      <div style={{ marginBottom: "32px" }}>
-        <h1
-          style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}
-        >
-          Select Date Range & Project
-        </h1>
-        <div style={{ marginBottom: "24px" }}>
+    <div
+      style={{
+        padding: "16px 20px",
+        minHeight: "100vh",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* FILTER BAR */}
+      <div
+        style={{
+          marginBottom: "24px",
+          padding: "12px 0",
+        }}
+      >
+        <h2 style={sectionTitle}>Filters</h2>
+
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
           <input
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            style={{ marginRight: "12px", padding: "6px" }}
+            style={{
+              padding: "8px",
+              borderRadius: "6px",
+              border: "1px solid #ccc",
+            }}
           />
 
           <input
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            style={{ marginRight: "12px", padding: "6px" }}
+            style={{
+              padding: "8px",
+              borderRadius: "6px",
+              border: "1px solid #ccc",
+            }}
           />
 
           <select
             value={selectedProject}
             onChange={(e) => setSelectedProject(e.target.value)}
-            style={{ marginRight: "12px", padding: "6px" }}
+            style={{
+              padding: "8px",
+              borderRadius: "6px",
+              border: "1px solid #ccc",
+            }}
           >
             <option value="">All Projects</option>
             {projects.map((project) => (
@@ -595,94 +664,90 @@ AND status NOT IN ("Canceled")`;
               setTickets([]);
               setNextPageToken(null);
               fetchTotalTickets();
-              fetchIssueData(); // date chart
-              fetchStatusData(); // status donut
+              fetchIssueData();
+              fetchStatusData();
               fetchOpenTickets();
               fetchSLAData();
               setTotalTickets(0);
             }}
             style={{
-              padding: "8px 16px",
+              padding: "8px 18px",
               backgroundColor: "#0052CC",
               color: "white",
               border: "none",
-              borderRadius: "4px",
+              borderRadius: "6px",
               cursor: "pointer",
+              fontWeight: "500",
             }}
           >
             Apply
           </button>
         </div>
       </div>
-      <hr style={{ margin: "40px 0", borderColor: "#DFE1E6" }} />
-      {chartData.length === 0 && (
-        <p style={{ marginTop: "16px" }}>
-          No tickets found for selected date range.
-        </p>
-      )}
 
-      <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
-        <div>
-          <h2 style={{ marginBottom: "20px" }}>Status of Tickets Created</h2>
+      {/* CHARTS ROW */}
+      <div style={{ display: "flex", gap: "20px", marginBottom: "24px" }}>
+        {/* STATUS CREATED */}
+        <div style={{ ...card, flex: 1 }}>
+          <h2 style={sectionTitle}>Status of Tickets Created</h2>
 
           {statusData.length === 0 && <p>No data available</p>}
 
           {statusData.length > 0 && (
-            <div style={{ display: "flex", gap: "40px", alignItems: "center" }}>
-              {/* Donut Chart */}
+            <div style={{ display: "flex", gap: "32px", alignItems: "center" }}>
+              {/* Donut */}
               <svg width="200" height="200" viewBox="0 0 200 200">
                 <g transform="rotate(-90 100 100)">
-                  {[...statusData].reverse().map((item, index) => {
-                    const percent = item.count / total;
-                    const strokeDasharray = `${percent * circumference} ${circumference}`;
-                    const strokeDashoffset = -cumulativePercent * circumference;
+                  {(() => {
+                    let cumulative = 0;
 
-                    cumulativePercent += percent;
+                    return statusData.map((item, index) => {
+                      const percent = total ? item.count / total : 0;
+                      const dash = `${percent * circumference} ${circumference}`;
+                      const offset = -cumulative * circumference;
 
-                    return (
-                      <circle
-                        key={index}
-                        r={radius}
-                        cx="100"
-                        cy="100"
-                        fill="transparent"
-                        stroke={getStatusColor(item.status, item.category)}
-                        strokeWidth="30"
-                        strokeDasharray={strokeDasharray}
-                        strokeDashoffset={strokeDashoffset}
-                        strokeLinecap="butt"
-                        style={{
-                          cursor: "pointer",
-                          pointerEvents: "visibleStroke",
-                        }}
-                        onClick={() => {
-                          let jql = `status = "${item.status}" AND created >= "${fromDate}" AND created <= "${toDate} 23:59"`;
+                      cumulative += percent;
 
-                          if (selectedProject) {
-                            jql += ` AND project = "${selectedProject}"`;
-                          }
+                      return (
+                        <circle
+                          key={item.status}
+                          r={radius}
+                          cx="100"
+                          cy="100"
+                          fill="transparent"
+                          stroke={getStatusColor(item.status, item.category)}
+                          strokeWidth="28"
+                          strokeDasharray={dash}
+                          strokeDashoffset={offset}
+                          style={{ cursor: "pointer" }}
+                          onClick={() => {
+                            let jql = `status = "${item.status}" AND created >= "${fromDate}" AND created <= "${toDate} 23:59"`;
 
-                          router.open(
-                            `/issues/?jql=${encodeURIComponent(jql)}`,
-                          );
-                        }}
-                      />
-                    );
-                  })}
+                            if (selectedProject) {
+                              jql += ` AND project = "${selectedProject}"`;
+                            }
+
+                            router.open(
+                              `/issues/?jql=${encodeURIComponent(jql)}`,
+                            );
+                          }}
+                        />
+                      );
+                    });
+                  })()}
                 </g>
+
                 <text
                   x="100"
                   y="95"
                   textAnchor="middle"
-                  fontSize="28"
-                  fontWeight="bold"
-                  fill="#0052CC"
+                  fontSize="26"
+                  fontWeight="600"
                   style={{ cursor: "pointer" }}
                   onClick={() => router.open(totalJiraUrl)}
                 >
                   {total}
                 </text>
-
                 <text
                   x="100"
                   y="120"
@@ -697,58 +762,53 @@ AND status NOT IN ("Canceled")`;
               {/* Legend */}
               <div>
                 {statusData.map((item, index) => {
-                  const colors = [
-                    "#0052CC",
-                    "#36B37E",
-                    "#FFAB00",
-                    "#FF5630",
-                    "#6554C0",
-                    "#00B8D9",
-                  ];
-
                   const percent = ((item.count / total) * 100).toFixed(1);
+
                   let jql = `status = "${item.status}" AND created >= "${fromDate}" AND created <= "${toDate} 23:59"`;
                   if (selectedProject) {
                     jql += ` AND project = "${selectedProject}"`;
                   }
-                  const encodedJql = encodeURIComponent(jql);
-                  const jiraUrl = `/issues/?jql=${encodedJql}`;
 
                   return (
                     <div
-                      key={index}
-                      onClick={() => router.open(jiraUrl)}
+                      key={item.label || item.status}
+                      onClick={() =>
+                        router.open(`/issues/?jql=${encodeURIComponent(jql)}`)
+                      }
                       style={{
-                        display: "flex",
+                        display: "grid",
+                        gridTemplateColumns: "16px auto 40px 60px",
                         alignItems: "center",
-                        marginBottom: "8px",
+                        marginBottom: "6px",
                         cursor: "pointer",
+                        fontSize: "13px",
+                        columnGap: "6px",
                       }}
                     >
+                      {/* color box */}
                       <div
                         style={{
-                          width: "14px",
-                          height: "14px",
+                          width: "12px",
+                          height: "12px",
                           backgroundColor: getStatusColor(
-                            item.status,
+                            item.label || item.status,
                             item.category,
                           ),
-                          marginRight: "8px",
                         }}
                       />
 
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          width: "160px",
-                        }}
-                      >
-                        <span>{item.status}</span>
-                        <span style={{ fontWeight: "500" }}>
-                          {item.count} ({percent}%)
-                        </span>
-                      </div>
+                      {/* status */}
+                      <span>{item.label || item.status}</span>
+
+                      {/* count */}
+                      <strong style={{ textAlign: "center" }}>
+                        {item.count}
+                      </strong>
+
+                      {/* percentage */}
+                      <strong style={{ textAlign: "center" }}>
+                        ({percent}%)
+                      </strong>
                     </div>
                   );
                 })}
@@ -756,428 +816,363 @@ AND status NOT IN ("Canceled")`;
             </div>
           )}
         </div>
-        <div
-          style={{
-            width: "1px",
-            backgroundColor: "#DFE1E6",
-            margin: "0 40px",
-            height: "260px",
-          }}
-        />
 
-        <div style={{ minWidth: "320px" }}>
-          <h2 style={{ marginBottom: "10px" }}>Active Tickets by Status</h2>
+        {/* ACTIVE */}
+        <div style={{ ...card, flex: 1 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "16px",
+              flexWrap: "wrap",
+            }}
+          >
+            <h2 style={{ ...sectionTitle, marginBottom: "0" }}>
+              All Active Tickets by Status
+            </h2>
 
-          <p style={{ color: "#6B778C", marginBottom: "20px" }}>
-            (All tickets irrespective of date range)
-          </p>
-          {openStatusData.length > 0 &&
-            (() => {
-              const total = openStatusData.reduce((sum, i) => sum + i.count, 0);
-              const radius = 80;
-              const circumference = 2 * Math.PI * radius;
-              let cumulative = 0;
+            <span
+              style={{
+                color: "#6B778C",
+                fontSize: "13px",
+              }}
+            >
+              (Tickets irrespective of date range)
+            </span>
+          </div>
 
-              const getDynamicColor = (index) => {
-                const colors = [
-                  "#0052CC",
-                  "#36B37E",
-                  "#FF8C00",
-                  "#6554C0",
-                  "#00B8D9",
-                  "#FF5630",
-                ];
-                return colors[index % colors.length];
-              };
+          {openStatusData.length === 0 && <p>No data available</p>}
 
-              return (
-                <div
-                  style={{ display: "flex", gap: "40px", alignItems: "center" }}
+          {openStatusData.length > 0 && (
+            <div style={{ display: "flex", gap: "32px", alignItems: "center" }}>
+              {/* Donut */}
+              <svg width="200" height="200" viewBox="0 0 200 200">
+                <g transform="rotate(-90 100 100)">
+                  {(() => {
+                    const total = openStatusData.reduce(
+                      (s, i) => s + i.count,
+                      0,
+                    );
+                    let cumulative = 0;
+
+                    return openStatusData.map((item) => {
+                      const percent = total ? item.count / total : 0;
+                      const dash = `${percent * circumference} ${circumference}`;
+                      const offset = -cumulative * circumference;
+
+                      cumulative += percent;
+
+                      return (
+                        <circle
+                          key={item.label}
+                          r={radius}
+                          cx="100"
+                          cy="100"
+                          fill="transparent"
+                          stroke={getStatusColor(item.label, item.category)}
+                          strokeWidth="28"
+                          strokeDasharray={dash}
+                          strokeDashoffset={offset}
+                          style={{ cursor: "pointer" }}
+                          onClick={() => {
+                            let jql = `status = "${item.label}"`;
+
+                            if (selectedProject) {
+                              jql += ` AND project = "${selectedProject}"`;
+                            }
+
+                            router.open(
+                              `/issues/?jql=${encodeURIComponent(jql)}`,
+                            );
+                          }}
+                        />
+                      );
+                    });
+                  })()}
+                </g>
+
+                {/* TOTAL */}
+                <text
+                  x="100"
+                  y="95"
+                  textAnchor="middle"
+                  fontSize="26"
+                  fontWeight="600"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => {
+                    let jql = `statusCategory != Done 
+                          AND status NOT IN ("Closed","Resolved","Canceled")`;
+
+                    if (selectedProject) {
+                      jql += ` AND project = "${selectedProject}"`;
+                    }
+
+                    router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
+                  }}
                 >
-                  <svg width="200" height="200" viewBox="0 0 200 200">
-                    <g transform="rotate(-90 100 100)">
-                      {[...openStatusData].reverse().map((item, index) => {
-                        const percent = total === 0 ? 0 : item.count / total;
-                        const dash = `${percent * circumference} ${circumference}`;
-                        const offset = -cumulative * circumference;
+                  {openStatusData.reduce((s, i) => s + i.count, 0)}
+                </text>
 
-                        cumulative += percent;
+                <text
+                  x="100"
+                  y="120"
+                  textAnchor="middle"
+                  fontSize="12"
+                  fill="#6B778C"
+                >
+                  Total Active Tickets
+                </text>
+              </svg>
 
-                        return (
-                          <circle
-                            key={index}
-                            r={radius}
-                            cx="100"
-                            cy="100"
-                            fill="transparent"
-                            stroke={getStatusColor(item.label, item.category)}
-                            strokeWidth="30"
-                            strokeDasharray={dash}
-                            strokeDashoffset={offset}
-                            strokeLinecap="butt"
-                            style={{
-                              cursor: "pointer",
-                              pointerEvents: "visibleStroke",
-                            }}
-                            onClick={() => {
-                              let jql = `status = "${item.label}"`;
-                              if (selectedProject) {
-                                jql += ` AND project = "${selectedProject}"`;
-                              }
+              {/* Legend */}
+              <div>
+                {(() => {
+                  const total = openStatusData.reduce((s, i) => s + i.count, 0);
 
-                              router.open(
-                                `/issues/?jql=${encodeURIComponent(jql)}`,
-                              );
-                            }}
-                          />
-                        );
-                      })}
-                    </g>
+                  return openStatusData.map((item) => {
+                    const percent = total
+                      ? ((item.count / total) * 100).toFixed(1)
+                      : 0;
 
-                    {/* Center Text */}
-                    <text
-                      x="100"
-                      y="100"
-                      textAnchor="middle"
-                      fontSize="22"
-                      fontWeight="bold"
-                    >
-                      {total}
-                    </text>
-                  </svg>
+                    let jql = `status = "${item.label}"`;
 
-                  {/* Legend */}
-                  <div>
-                    {openStatusData.map((item, index) => (
+                    if (selectedProject) {
+                      jql += ` AND project = "${selectedProject}"`;
+                    }
+
+                    return (
                       <div
-                        key={index}
+                        key={item.label}
+                        onClick={() =>
+                          router.open(`/issues/?jql=${encodeURIComponent(jql)}`)
+                        }
                         style={{
-                          display: "flex",
+                          display: "grid",
+                          gridTemplateColumns: "16px auto 40px 60px",
                           alignItems: "center",
-                          marginBottom: "8px",
+                          marginBottom: "6px",
+                          cursor: "pointer",
+                          fontSize: "13px",
+                          columnGap: "6px",
                         }}
                       >
+                        {/* color */}
                         <div
                           style={{
-                            width: "14px",
-                            height: "14px",
+                            width: "12px",
+                            height: "12px",
                             backgroundColor: getStatusColor(
                               item.label,
                               item.category,
                             ),
-                            marginRight: "8px",
                           }}
                         />
-                        <span>
-                          {item.label}: {item.count}
-                        </span>
+
+                        {/* label */}
+                        <span>{item.label}</span>
+
+                        {/* count */}
+                        <strong style={{ textAlign: "center" }}>
+                          {item.count}
+                        </strong>
+
+                        {/* percentage */}
+                        <strong style={{ textAlign: "center" }}>
+                          ({percent}%)
+                        </strong>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-      <div>
-        <h2 style={{ marginBottom: "20px" }}>SLA Performance</h2>
 
-        <div
-          style={{
-            border: "1px solid #DFE1E6",
-            borderRadius: "10px",
-            padding: "20px",
-            backgroundColor: "#F4F5F7",
-            width: "260px",
-          }}
-        >
-          {slaData.length === 1 && slaData[0].count === null ? (
+      {/* SLA */}
+      <div style={{ ...card, marginBottom: "24px", maxWidth: "400px" }}>
+        <h2 style={sectionTitle}>SLA Performance</h2>
+
+        {slaData.map((item, index) => (
+          <div key={index} style={{ display: "flex", marginBottom: "10px" }}>
             <div
               style={{
-                textAlign: "center",
-                color: "#6B778C",
-                fontWeight: "500",
-                fontSize: "16px",
+                width: "10px",
+                height: "10px",
+                backgroundColor: item.label.includes("within")
+                  ? "#36B37E"
+                  : "#FF5630",
+                marginRight: "8px",
+                marginTop: "6px",
               }}
-            >
-              No SLA Tracked
-            </div>
-          ) : (
-            slaData.map((item, index) => {
-              let jql = `"SLA Status" = "${item.label.includes("within") ? "Met" : "Breached"}"
-AND statusCategory = Done 
-AND status NOT IN ("Canceled")`;
+            />
+            <span>{item.label}</span>
+            <strong style={{ marginLeft: "auto" }}>{item.count}</strong>
+          </div>
+        ))}
+      </div>
 
-              if (fromDate && toDate) {
-                jql += ` AND created >= "${fromDate}" AND created <= "${toDate} 23:59"`;
-              }
+      {/* BAR CHART */}
+      <div style={{ ...card, marginBottom: "24px" }}>
+        <h2 style={sectionTitle}>Tickets by Created Date</h2>
+
+        {chartData.length === 0 && <p>No data available</p>}
+
+        {chartData.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              gap: "20px",
+              height: "220px",
+              padding: "20px 16px 32px 16px",
+              overflowX: "auto",
+              overflowY: "hidden",
+              scrollbarGutter: "stable",
+            }}
+          >
+            {chartData.map((item) => {
+              const barHeight =
+                (Math.sqrt(item.count) / Math.sqrt(maxCount)) * 160;
+              let jql = `created >= "${item.date}" AND created <= "${item.date} 23:59"`;
 
               if (selectedProject) {
                 jql += ` AND project = "${selectedProject}"`;
               }
 
-              const encodedJql = encodeURIComponent(jql);
-              const jiraUrl = `/issues/?jql=${encodedJql}`;
-
               return (
                 <div
-                  key={index}
-                  onClick={() => router.open(jiraUrl)}
+                  key={item.date}
                   style={{
                     display: "flex",
+                    flexDirection: "column",
                     alignItems: "center",
-                    marginBottom: "10px",
+                    minWidth: "60px",
+                    flex: "0 0 auto",
                     cursor: "pointer",
                   }}
+                  onClick={() =>
+                    router.open(`/issues/?jql=${encodeURIComponent(jql)}`)
+                  }
                 >
+                  {/* BAR */}
                   <div
                     style={{
-                      width: "14px",
-                      height: "14px",
-                      backgroundColor: item.label.includes("within")
-                        ? "#36B37E"
-                        : "#EA3680",
-                      marginRight: "8px",
-                    }}
-                  />
-
-                  <div
-                    style={{
+                      height: `${barHeight}px`,
+                      minHeight: "6px",
+                      width: "36px",
+                      background: "#36B37E",
+                      borderRadius: "4px 4px 0 0",
                       display: "flex",
-                      justifyContent: "space-between",
-                      width: "245px",
-                      fontSize: "16px",
-                      fontWeight: "500",
+                      alignItems: "flex-end",
+                      justifyContent: "center",
+                      color: "#fff",
+                      fontSize: "11px",
+                      fontWeight: "600",
+                      paddingBottom: "4px",
+                      boxSizing: "border-box",
                     }}
                   >
-                    <span>{item.label}</span>
-                    <span>{item.count}</span>
+                    {item.count}
+                  </div>
+                  {/* DATE */}
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      marginTop: "6px",
+                      textAlign: "center",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {formatDate(item.date)}
                   </div>
                 </div>
               );
-            })
-          )}
-        </div>
-      </div>
-      {/* Date-wise Chart */}
-      <div>
-        <h2 style={{ marginBottom: "20px" }}>Tickets by Created Date</h2>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-end",
-            gap: "12px",
-            height: "220px",
-            padding: "20px 16px 40px 16px",
-            border: "1px solid #ddd",
-            borderRadius: "6px",
-            background: "#f4f5f7",
-            overflowX: "auto",
-          }}
-        >
-          {chartData.map((item, index) => {
-            const chartHeight = 160;
-            const barHeight = (item.count / maxCount) * chartHeight;
-
-            // Build JQL for that specific date
-            const nextDate = new Date(item.date);
-            nextDate.setDate(nextDate.getDate() + 1);
-            const nextDateStr = nextDate.toISOString().split("T")[0];
-
-            let jql = `created >= "${item.date}" AND created < "${nextDateStr}"`;
-            if (selectedProject) {
-              jql += ` AND project = "${selectedProject}"`;
-            }
-            const encodedJql = encodeURIComponent(jql);
-            const jiraUrl = `/issues/?jql=${encodedJql}`;
-            return (
-              <div
-                key={index}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  minWidth: "60px",
-                  cursor: "pointer",
-                }}
-                onClick={() => router.open(jiraUrl)}
-              >
-                <div
-                  style={{
-                    height: `${Math.max(barHeight, 8)}px`,
-                    width: "40px",
-                    backgroundColor: "#2E8B57",
-                    borderRadius: "4px 4px 0 0",
-                    display: "flex",
-                    alignItems: "flex-end",
-                    justifyContent: "center",
-                    color: "white",
-                    fontSize: "9px",
-                    paddingBottom: "0px",
-                  }}
-                >
-                  {item.count}
-                </div>
-                <div style={{ fontSize: "11px", marginTop: "6px" }}>
-                  {formatDate(item.date)}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div style={{ marginTop: "40px" }}>
-        <h2>Open & In Progress Tickets</h2>
-
-        {totalTickets > 0 && (
-          <div
-            style={{
-              marginTop: "10px",
-              marginBottom: "10px",
-              fontWeight: "500",
-            }}
-          >
-            Showing {issues.length} of {totalTickets} tickets
+            })}
           </div>
         )}
+      </div>
 
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            marginTop: "10px",
-            tableLayout: "fixed",
-          }}
-        >
-          <thead>
-            <tr style={{ background: "#f4f5f7" }}>
-              <th
-                style={{
-                  padding: "8px",
-                  border: "1px solid #ddd",
-                  width: "90px",
-                }}
-              >
-                Key
-              </th>
-              <th
-                style={{
-                  padding: "8px",
-                  border: "1px solid #ddd",
-                  width: "55%",
-                }}
-              >
-                Summary
-              </th>
-              <th
-                style={{
-                  padding: "8px",
-                  border: "1px solid #ddd",
-                  width: "140px",
-                }}
-              >
-                Status
-              </th>
-              <th
-                style={{
-                  padding: "8px",
-                  border: "1px solid #ddd",
-                  width: "150px",
-                }}
-              >
-                Assignee
-              </th>
-              <th
-                style={{
-                  padding: "8px",
-                  border: "1px solid #ddd",
-                  width: "130px",
-                }}
-              >
-                Created
-              </th>
-            </tr>
-          </thead>
+      {/* TABLE */}
+      <div style={{ ...card, marginBottom: "24px" }}>
+        <h2 style={{ ...sectionTitle }}>Open & In Progress Tickets</h2>
 
-          <tbody>
-            {issues.map((issue) => (
-              <tr key={issue.id}>
-                <td
-                  style={{
-                    padding: "8px",
-                    border: "1px solid #ddd",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <a
-                    href={`/browse/${issue.key}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      router.open(`/browse/${issue.key}`);
+        {issues.length === 0 && <p>No data available</p>}
+
+        {issues.length > 0 && (
+          <>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                border: "1px solid #DFE1E6",
+              }}
+            >
+              <thead>
+                <tr style={{ background: "#F4F5F7" }}>
+                  <th style={thStyle}>Key</th>
+                  <th style={thStyle}>Summary</th>
+                  <th style={thStyle}>Status</th>
+                  <th style={thStyle}>Assignee</th>
+                  <th style={{ ...thStyle, borderRight: "none" }}>Created</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {issues.map((issue) => (
+                  <tr
+                    key={issue.id}
+                    style={{
+                      borderBottom: "1px solid #DFE1E6",
                     }}
                   >
-                    {issue.key}
-                  </a>
-                </td>
+                    <td style={tdStyle}>
+                      <span
+                        style={{
+                          color: "#0052CC",
+                          cursor: "pointer",
+                          fontWeight: "500",
+                        }}
+                        onClick={() => router.open(`/browse/${issue.key}`)}
+                      >
+                        {issue.key}
+                      </span>
+                    </td>
 
-                <td
-                  style={{
-                    padding: "8px",
-                    border: "1px solid #ddd",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {issue.fields.summary}
-                </td>
+                    <td style={tdStyle}>{issue.fields.summary}</td>
+                    <td style={tdStyle}>{issue.fields.status.name}</td>
+                    <td style={tdStyle}>
+                      {issue.fields.assignee?.displayName || "Unassigned"}
+                    </td>
+                    <td style={{ ...tdStyle, borderRight: "none" }}>
+                      {new Date(issue.fields.created).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-                <td
-                  style={{
-                    padding: "8px",
-                    border: "1px solid #ddd",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {issue.fields.status.name}
-                </td>
-
-                <td style={{ padding: "8px", border: "1px solid #ddd" }}>
-                  {issue.fields.assignee?.displayName || "Unassigned"}
-                </td>
-
-                <td style={{ padding: "8px", border: "1px solid #ddd" }}>
-                  {new Date(issue.fields.created).toLocaleDateString()}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div style={{ marginTop: "10px", display: "flex", gap: "10px" }}>
-          {/* <button
-            disabled={startAt === 0}
-            onClick={() => fetchOpenTickets(startAt - pageSize)}
-          >
-            Previous
-          </button> */}
-
-          <button
-            disabled={!nextPageToken}
-            onClick={() => fetchOpenTickets(nextPageToken)}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#0052CC",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: nextPageToken ? "pointer" : "not-allowed",
-            }}
-          >
-            {nextPageToken ? "Load More" : "No More Tickets"}
-          </button>
-        </div>
+            {nextPageToken && (
+              <button
+                onClick={() => fetchOpenTickets(nextPageToken)}
+                style={{
+                  marginTop: "12px",
+                  padding: "8px 16px",
+                  background: "#0052CC",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontWeight: "500",
+                }}
+              >
+                Load More
+              </button>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
