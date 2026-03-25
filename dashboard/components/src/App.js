@@ -666,6 +666,7 @@ const App = () => {
               borderRadius: "6px",
               border: "1px solid #ccc",
               fontSize: "16px",
+              fontFamily: "inherit",
             }}
           />
 
@@ -678,6 +679,7 @@ const App = () => {
               borderRadius: "6px",
               border: "1px solid #ccc",
               fontSize: "16px",
+              fontFamily: "inherit",
             }}
           />
 
