@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { requestJira, router } from "@forge/bridge";
 import "@atlaskit/css-reset";
 
@@ -30,6 +30,7 @@ const App = () => {
   const [allProjects, setAllProjects] = useState([]);
   const [isProjectLoading, setIsProjectLoading] = useState(false);
   const [error, setError] = useState("");
+  const dropdownRef = useRef(null);
   //const [totalStatusTickets, setTotalStatusTickets] = useState(0);
 
   const pageSize = 10;
@@ -535,6 +536,23 @@ const App = () => {
     fontSize: "15px",
   });
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target)
+      ) {
+        setShowStatusDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   // Function to determine status color based on name and category
   const getStatusColor = (status, category) => {
     const name = status.toLowerCase();
@@ -586,7 +604,7 @@ const App = () => {
   };
 
   const sectionTitle = {
-    fontSize: "19px",
+    fontSize: "21px",
     fontWeight: "600",
     marginBottom: "16px",
   };
@@ -647,6 +665,7 @@ const App = () => {
               padding: "8px",
               borderRadius: "6px",
               border: "1px solid #ccc",
+              fontSize: "16px",
             }}
           />
 
@@ -658,10 +677,11 @@ const App = () => {
               padding: "8px",
               borderRadius: "6px",
               border: "1px solid #ccc",
+              fontSize: "16px",
             }}
           />
 
-          <div style={{ position: "relative" }}>
+          <div ref={dropdownRef} style={{ position: "relative" }}>
             <button
               onClick={() => setShowStatusDropdown((prev) => !prev)}
               style={{
@@ -672,6 +692,7 @@ const App = () => {
                 cursor: "pointer",
                 minWidth: "160px",
                 textAlign: "left",
+                fontSize: "16px",
               }}
             >
               Project Status
@@ -714,6 +735,7 @@ const App = () => {
                       gap: "6px",
                       padding: "4px 0",
                       cursor: "pointer",
+                      fontSize: "16px",
                     }}
                   >
                     <input
@@ -735,6 +757,7 @@ const App = () => {
               padding: "8px",
               borderRadius: "6px",
               border: "1px solid #ccc",
+              fontSize: "16px",
             }}
           >
             {projects.length === 0 ? (
@@ -764,13 +787,7 @@ const App = () => {
               fetchOpenTickets();
               fetchSLAData();
               setTotalTickets(0);
-
               fetchOpenStatusSummary();
-              fetchTotalTickets();
-              fetchIssueData();
-              fetchStatusData();
-              fetchOpenTickets();
-              fetchSLAData();
             }}
             style={{
               padding: "8px 18px",
@@ -780,6 +797,7 @@ const App = () => {
               borderRadius: "6px",
               cursor: "pointer",
               fontWeight: "500",
+              fontSize: "16px",
             }}
           >
             Apply
@@ -797,7 +815,7 @@ const App = () => {
           {statusData.length === 0 && <p>No data available</p>}
 
           {statusData.length > 0 && (
-            <div style={{ display: "flex", gap: "32px", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "22px", alignItems: "center" }}>
               {/* Donut */}
               <svg width="200" height="200" viewBox="0 0 200 200">
                 <g transform="rotate(-90 100 100)">
@@ -822,7 +840,8 @@ const App = () => {
                           strokeWidth="28"
                           strokeDasharray={dash}
                           strokeDashoffset={offset}
-                          style={{ cursor: "pointer" }}
+                          pointerEvents="stroke"
+                          style={{ cursor: "pointer", pointerEvents: "stroke" }}
                           onClick={() => {
                             let jql = `status = "${item.status}" AND created >= "${fromDate}" AND created <= "${toDate} 23:59"`;
 
@@ -884,7 +903,7 @@ const App = () => {
                         alignItems: "center",
                         marginBottom: "6px",
                         cursor: "pointer",
-                        fontSize: "14px",
+                        fontSize: "16px",
                         columnGap: "6px",
                       }}
                     >
@@ -945,10 +964,10 @@ const App = () => {
             </span>
           </div>
 
-          {openStatusData.length === 0 && <p>No data available</p>}
+          {openStatusData.length === 0 && <p>No active tickets available</p>}
 
           {openStatusData.length > 0 && (
-            <div style={{ display: "flex", gap: "32px", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "22px", alignItems: "center" }}>
               {/* Donut */}
               <svg width="200" height="200" viewBox="0 0 200 200">
                 <g transform="rotate(-90 100 100)">
@@ -977,7 +996,8 @@ const App = () => {
                           strokeWidth="28"
                           strokeDasharray={dash}
                           strokeDashoffset={offset}
-                          style={{ cursor: "pointer" }}
+                          pointerEvents="stroke"
+                          style={{ cursor: "pointer", pointerEvents: "stroke" }}
                           onClick={() => {
                             let jql = `status = "${item.label}"`;
 
@@ -1055,7 +1075,7 @@ const App = () => {
                           alignItems: "center",
                           marginBottom: "6px",
                           cursor: "pointer",
-                          fontSize: "14px",
+                          fontSize: "16px",
                           columnGap: "6px",
                         }}
                       >
@@ -1094,26 +1114,83 @@ const App = () => {
       </div>
 
       {/* SLA */}
-      <div style={{ ...card, marginBottom: "24px", maxWidth: "400px" }}>
-        <h2 style={sectionTitle}>SLA Performance</h2>
+      <div style={{ ...card, marginBottom: "24px" }}>
+        <h2 style={{ ...sectionTitle, textAlign: "center" }}>
+          SLA Performance
+        </h2>
 
-        {slaData.map((item, index) => (
-          <div key={index} style={{ display: "flex", marginBottom: "10px" }}>
-            <div
+        {slaData.length > 0 && slaData[0].count !== null && (
+          <div
+            style={{
+              textAlign: "center",
+              fontSize: "19px",
+              display: "flex",
+              justifyContent: "center",
+              gap: "50px", // spacing between both sections
+            }}
+          >
+            {/* WITHIN SLA */}
+            <span
               style={{
-                width: "10px",
-                height: "10px",
-                backgroundColor: item.label.includes("within")
-                  ? "#36B37E"
-                  : "#FF5630",
-                marginRight: "8px",
-                marginTop: "6px",
+                cursor: "pointer",
+                color: "#172B4D", //text black
+                fontWeight: "500",
               }}
-            />
-            <span>{item.label}</span>
-            <strong style={{ marginLeft: "auto" }}>{item.count}</strong>
+              onClick={() => {
+                let jql = `created >= "${fromDate}" 
+                     AND created <= "${toDate} 23:59"
+                     AND statusCategory = Done
+                     AND status NOT IN ("Canceled")
+                     AND cf[10273] = "Met"`;
+
+                if (selectedProject) {
+                  jql += ` AND project = "${selectedProject}"`;
+                }
+
+                router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
+              }}
+            >
+              Tickets Closed within SLA{" "}
+              <span style={{ color: "#36B37E", fontWeight: "600" }}>
+                {slaData[0].count}
+              </span>
+            </span>
+
+            {/* Separator */}
+            <span>|</span>
+
+            {/* OUTSIDE SLA */}
+            <span
+              style={{
+                cursor: "pointer",
+                color: "#172B4D", //text black
+                fontWeight: "500",
+              }}
+              onClick={() => {
+                let jql = `created >= "${fromDate}" 
+                     AND created <= "${toDate} 23:59"
+                     AND statusCategory = Done
+                     AND status NOT IN ("Canceled")
+                     AND cf[10273] = "Breached"`;
+
+                if (selectedProject) {
+                  jql += ` AND project = "${selectedProject}"`;
+                }
+
+                router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
+              }}
+            >
+              Tickets Closed outside of SLA{" "}
+              <span style={{ color: "#FF5630", fontWeight: "600" }}>
+                {slaData[1]?.count || 0}
+              </span>
+            </span>
           </div>
-        ))}
+        )}
+
+        {slaData.length > 0 && slaData[0].count === null && (
+          <div style={{ textAlign: "center" }}>No SLA Tracked</div>
+        )}
       </div>
 
       {/* BAR CHART */}
@@ -1201,7 +1278,7 @@ const App = () => {
       <div style={{ ...card, marginBottom: "24px" }}>
         <h2 style={{ ...sectionTitle }}>Open & In Progress Tickets</h2>
 
-        {issues.length === 0 && <p>No data available</p>}
+        {issues.length === 0 && <p>No tickets available</p>}
 
         {issues.length > 0 && (
           <>
