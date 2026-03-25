@@ -221,10 +221,15 @@ const App = () => {
             return category && projectStatusFilter.includes(category);
           });
 
-    setProjects(filtered);
+    //SORT HERE
+    const sorted = filtered.sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
 
-    if (filtered.length > 0) {
-      setSelectedProject(filtered[0].key);
+    setProjects(sorted);
+
+    if (sorted.length > 0) {
+      setSelectedProject(sorted[0].key);
     } else {
       setSelectedProject("");
     }
