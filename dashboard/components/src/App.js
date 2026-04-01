@@ -368,11 +368,13 @@ const App = () => {
   // list view
   const fetchOpenTickets = async (token = null) => {
     try {
-      let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59" AND statusCategory IN ("To Do","In Progress")`;
+      let jql = `statusCategory != Done AND status NOT IN ("Closed","Resolved","Canceled")`;
 
       if (selectedProject) {
         jql += ` AND project = "${selectedProject}"`;
       }
+
+      jql += ` ORDER BY created ASC`;
 
       const body = {
         jql,
@@ -1324,8 +1326,17 @@ const App = () => {
       </div>
 
       {/* TABLE */}
-      <div style={{ ...card, marginBottom: "24px" }}>
+      <div style={{ ...card,  display: "flex", flexWrap: "wrap", marginBottom: "24px" }}>
         <h2 style={{ ...sectionTitle }}>Open & In Progress Tickets</h2>
+        <span
+          style={{
+            color: "#6B778C",
+            fontSize: "18px",
+            paddingLeft: "4px",
+          }}
+        >
+          (Tickets irrespective of date range)
+        </span>
 
         {issues.length === 0 && <p>No tickets available</p>}
 
