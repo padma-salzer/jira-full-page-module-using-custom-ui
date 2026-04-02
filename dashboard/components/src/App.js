@@ -33,6 +33,12 @@ const App = () => {
   const dropdownRef = useRef(null);
   //const [totalStatusTickets, setTotalStatusTickets] = useState(0);
 
+  const hasResolutionData =
+    (slaData[0]?.count || 0) + (slaData[1]?.count || 0) > 0;
+
+  const hasResponseData =
+    (slaData[2]?.count || 0) + (slaData[3]?.count || 0) > 0;
+
   const pageSize = 10;
 
   const formatDate = (date) => {
@@ -217,9 +223,9 @@ const App = () => {
       projectStatusFilter.length === 0
         ? allProjects
         : allProjects.filter((project) => {
-            const category = project.projectCategory?.name;
-            return category && projectStatusFilter.includes(category);
-          });
+          const category = project.projectCategory?.name;
+          return category && projectStatusFilter.includes(category);
+        });
 
     const sorted = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -412,7 +418,7 @@ const App = () => {
     setSlaData([]);
 
     try {
-      let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59" AND statusCategory = Done AND status NOT IN ("Canceled")`;
+      let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59" AND status NOT IN ("Canceled")`;
 
       if (selectedProject) {
         jql += ` AND project = "${selectedProject}"`;
@@ -425,7 +431,7 @@ const App = () => {
         const body = {
           jql,
           maxResults: 100,
-          fields: ["customfield_10273"],
+          fields: ["customfield_10273", "customfield_10646", "status"], // ✅ add status
         };
 
         if (nextPageToken) {
@@ -450,37 +456,45 @@ const App = () => {
       } while (nextPageToken);
 
       if (allTickets.length === 0) {
-        setSlaData([{ label: "No SLA Tracked", count: null }]);
+        setSlaData([]);
         return;
       }
 
-      const grouped = {
-        Met: 0,
-        Breached: 0,
-      };
+      const resolutionGrouped = { Met: 0, Breached: 0 };
+      const responseGrouped = { Met: 0, Breached: 0 };
 
-      let hasSLA = false;
-
+      // ✅ LOOP ONLY FOR CALCULATION
       allTickets.forEach((issue) => {
-        const slaField = issue.fields?.["customfield_10273"];
-        if (!slaField) return;
+        const statusCategory =
+          issue.fields.status?.statusCategory?.name;
 
-        hasSLA = true;
+        // 🔹 Resolution SLA (Done only)
+        const resolutionField = issue.fields?.["customfield_10273"];
 
-        const sla = typeof slaField === "string" ? slaField : slaField.value;
+        if (statusCategory === "Done" && resolutionField?.value) {
+          const sla = resolutionField.value;
 
-        if (sla === "Met") grouped.Met += 1;
-        if (sla === "Breached") grouped.Breached += 1;
+          if (sla === "Breached") resolutionGrouped.Breached += 1;
+          else if (sla === "Met") resolutionGrouped.Met += 1;
+        }
+
+        // 🔹 Response SLA (ALL tickets)
+        const responseField = issue.fields?.["customfield_10646"];
+
+        if (responseField?.value) {
+          const sla = responseField.value;
+
+          if (sla === "Breached") responseGrouped.Breached += 1;
+          else if (sla === "Met") responseGrouped.Met += 1;
+        }
       });
 
-      if (!hasSLA) {
-        setSlaData([{ label: "No SLA Tracked", count: null }]);
-        return;
-      }
-
+      // ✅ SET STATE HERE (AFTER LOOP)
       setSlaData([
-        { label: "Tickets Closed within SLA", count: grouped.Met },
-        { label: "Tickets Closed outside of SLA", count: grouped.Breached },
+        { label: "Resolution SLA - Met", count: resolutionGrouped.Met },
+        { label: "Resolution SLA - Breached", count: resolutionGrouped.Breached },
+        { label: "Response SLA - Met", count: responseGrouped.Met },
+        { label: "Response SLA - Breached", count: responseGrouped.Breached },
       ]);
     } catch (error) {
       console.error("Error fetching SLA data:", error);
@@ -1126,117 +1140,206 @@ const App = () => {
 
       {/* SLA */}
       <div style={{ ...card, marginBottom: "24px" }}>
-        {/* Title */}
         <h2 style={sectionTitle}>SLA Performance</h2>
 
-        {slaData.length > 0 && slaData[0].count !== null && (
-          <div
-            style={{
+        {/* ===================== */}
+        {/* 🔹 RESPONSE SLA (TOP) */}
+        {/* ===================== */}
+        {slaData.length > 0 && (
+          <>
+            <div style={{
               display: "flex",
+              alignItems: "center",
+              gap: "60px",
               marginTop: "16px",
-              gap: "20px",
-            }}
-          >
-            {/* WITHIN SLA */}
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-              onClick={() => {
-                let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59" AND statusCategory = Done AND status NOT IN ("Canceled")
-                    AND cf[10273] = "Met"`;
+            }}>
+              <span style={{ fontSize: "17px", fontWeight: "600", width: "220px" }}>
+                Time to First Response
+              </span>
 
-                if (selectedProject) {
-                  jql += ` AND project = "${selectedProject}"`;
-                }
+              {hasResponseData ? (
+                <>
+                  {/* WITHIN */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px", // 👈 label ↔ number spacing
+                      minWidth: "250px", // 👈 keeps alignment stable
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59"
+            AND status NOT IN ("Canceled")
+            AND cf[10646] = "Met"`;
 
-                router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: "30px",
-                }}
-              >
-                <span
+                      if (selectedProject) {
+                        jql += ` AND project = "${selectedProject}"`;
+                      }
+
+                      router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
+                    }}
+                  >
+                    <span style={{ fontSize: "16px",}}>
+                      Tickets Responded within SLA
+                    </span>
+                    <span style={{ width: "50px",color: "#36B37E", fontWeight: "700", fontSize: "20px", minWidth: "30px", textAlign: "right" }}>
+                      {slaData[2]?.count || 0}
+                    </span>
+                  </div>
+
+                  {/* BREACHED */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px", // 👈 label ↔ number spacing
+                      minWidth: "250px", // 👈 keeps alignment stable
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59"
+            AND status NOT IN ("Canceled")
+            AND cf[10646] = "Breached"`;
+
+                      if (selectedProject) {
+                        jql += ` AND project = "${selectedProject}"`;
+                      }
+
+                      router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
+                    }}
+                  >
+                    <span style={{ fontSize: "16px" }}>
+                      Tickets Responded outside SLA
+                    </span>
+                    <span style={{  width: "50px", color: "#FF5630", fontWeight: "700", fontSize: "20px", minWidth: "30px", textAlign: "right" }}>
+                      {slaData[3]?.count || 0}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div
                   style={{
-                    fontWeight: "600",
-                    fontSize: "19px",
-                    color: "#172B4D",
+                    display: "flex",
+                    alignItems: "center",
+                    //gap: "60px",
+                    //marginTop: "8px",
                   }}
                 >
-                  Tickets Closed within SLA
-                </span>
+                  {/* EMPTY SPACE (same width as title column) */}
+                  <span style={{ width: "220px" }}></span>
 
-                <span
-                  style={{
-                    fontSize: "26px",
-                    fontWeight: "700",
-                    color: "#36B37E",
-                    lineHeight: "1",
-                  }}
-                >
-                  {slaData[0].count}
-                </span>
-              </div>
+                  {/* MESSAGE */}
+                  <span style={{ fontSize: "16px", color: "#6B778C" }}>
+                    No tickets available
+                  </span>
+                </div>
+              )}
             </div>
-
-            {/* OUTSIDE SLA */}
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-              onClick={() => {
-                let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59" AND statusCategory = Done AND status NOT IN ("Canceled")
-                    AND cf[10273] = "Breached"`;
-
-                if (selectedProject) {
-                  jql += ` AND project = "${selectedProject}"`;
-                }
-
-                router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: "30px",
-                }}
-              >
-                <span
-                  style={{
-                    fontWeight: "600",
-                    fontSize: "19px",
-                    color: "#172B4D",
-                  }}
-                >
-                  Tickets Closed outside of SLA
-                </span>
-
-                <span
-                  style={{
-                    fontSize: "26px",
-                    fontWeight: "700",
-                    color: "#FF5630",
-                    lineHeight: "1",
-                  }}
-                >
-                  {slaData[1]?.count || 0}
-                </span>
-              </div>
-            </div>
-          </div>
+          </>
         )}
 
+        {/* ===================== */}
+        {/* 🔹 RESOLUTION SLA (BOTTOM - EXISTING) */}
+        {/* ===================== */}
+        {slaData.length > 0 && (
+          <>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "60px",
+              marginTop: "16px",
+            }}>
+              <span style={{ fontSize: "17px", fontWeight: "600", width: "220px" }}>
+                Time to Resolution
+              </span>
+
+              {hasResolutionData ? (
+                <>
+                  {/* WITHIN */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px", // 👈 label ↔ number spacing
+                      minWidth: "250px", // 👈 keeps alignment stable
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      let jql = `created >= "${fromDate}" 
+                      AND created <= "${toDate} 23:59" 
+                      AND status NOT IN ("Canceled")
+                      AND statusCategory = Done
+                      AND cf[10273] = "Met"`;
+
+                      if (selectedProject) {
+                        jql += ` AND project = "${selectedProject}"`;
+                      }
+                      router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
+                    }}
+
+                  >
+                    <span style={{ fontSize: "16px" }}>
+                      Tickets Closed within SLA
+                    </span>
+                    <span style={{  width: "84px", color: "#36B37E", fontWeight: "700", fontSize: "20px", minWidth: "30px", textAlign: "right" }}>
+                      {slaData[0]?.count || 0}
+                    </span>
+                  </div>
+
+                  {/* BREACHED */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px", // 👈 label ↔ number spacing
+                      minWidth: "250px", // 👈 keeps alignment stable
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      let jql = `created >= "${fromDate}" 
+                      AND created <= "${toDate} 23:59" 
+                      AND status NOT IN ("Canceled")
+                      AND statusCategory = Done
+                      AND cf[10273] = "Breached"`;
+
+                      if (selectedProject) {
+                        jql += ` AND project = "${selectedProject}"`;
+                      }
+                      router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
+                    }}
+                  >
+                    <span style={{ fontSize: "16px" }}>
+                      Tickets Closed outside SLA
+                    </span>
+                    <span style={{  width: "84px",color: "#FF5630", fontWeight: "700", fontSize: "20px", textAlign: "right" }}>
+                      {slaData[1]?.count || 0}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    //gap: "60px",
+                    //marginTop: "8px",
+                  }}
+                >
+                  {/* EMPTY SPACE (same width as title column) */}
+                  <span style={{ width: "220px" }}></span>
+
+                  {/* MESSAGE */}
+                  <span style={{ fontSize: "16px", color: "#6B778C" }}>
+                    No tickets available
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* NO DATA */}
         {slaData.length > 0 && slaData[0].count === null && (
           <div style={{ textAlign: "center", marginTop: "12px" }}>
             No SLA Tracked
@@ -1247,9 +1350,7 @@ const App = () => {
       {/* BAR CHART */}
       <div style={{ ...card, marginBottom: "24px" }}>
         <h2 style={sectionTitle}>Tickets by Created Date</h2>
-
         {chartData.length === 0 && <p>No data available</p>}
-
         {chartData.length > 0 && (
           <div
             style={{
@@ -1326,7 +1427,7 @@ const App = () => {
       </div>
 
       {/* TABLE */}
-      <div style={{ ...card,  display: "flex", flexWrap: "wrap", marginBottom: "24px" }}>
+      <div style={{ ...card, display: "flex", flexWrap: "wrap", marginBottom: "24px" }}>
         <h2 style={{ ...sectionTitle }}>Open & In Progress Tickets</h2>
         <span
           style={{
