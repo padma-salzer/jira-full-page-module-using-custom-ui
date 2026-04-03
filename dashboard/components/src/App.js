@@ -31,6 +31,7 @@ const App = () => {
   const [isProjectLoading, setIsProjectLoading] = useState(false);
   const [error, setError] = useState("");
   const dropdownRef = useRef(null);
+  const [hasSLAConfigured, setHasSLAConfigured] = useState(true);
   //const [totalStatusTickets, setTotalStatusTickets] = useState(0);
 
   const hasResolutionData =
@@ -456,6 +457,7 @@ const App = () => {
       } while (nextPageToken);
 
       if (allTickets.length === 0) {
+        setHasSLAConfigured(false);
         setSlaData([]);
         return;
       }
@@ -464,13 +466,18 @@ const App = () => {
       const responseGrouped = { Met: 0, Breached: 0 };
 
       // ✅ LOOP ONLY FOR CALCULATION
+      let slaFieldExists = false;
       allTickets.forEach((issue) => {
+        const resolutionField = issue.fields?.["customfield_10273"];
+        const responseField = issue.fields?.["customfield_10646"];
+
+        if (resolutionField !== undefined || responseField !== undefined) {
+          slaFieldExists = true;
+        }
         const statusCategory =
           issue.fields.status?.statusCategory?.name;
 
         // 🔹 Resolution SLA (Done only)
-        const resolutionField = issue.fields?.["customfield_10273"];
-
         if (statusCategory === "Done" && resolutionField?.value) {
           const sla = resolutionField.value;
 
@@ -479,8 +486,6 @@ const App = () => {
         }
 
         // 🔹 Response SLA (ALL tickets)
-        const responseField = issue.fields?.["customfield_10646"];
-
         if (responseField?.value) {
           const sla = responseField.value;
 
@@ -488,6 +493,8 @@ const App = () => {
           else if (sla === "Met") responseGrouped.Met += 1;
         }
       });
+
+      setHasSLAConfigured(slaFieldExists);
 
       // ✅ SET STATE HERE (AFTER LOOP)
       setSlaData([
@@ -969,7 +976,7 @@ const App = () => {
           <div
             style={{
               display: "flex",
-              alignItems: "center",
+              alignItems: "baseline",
               gap: "8px",
               marginBottom: "16px",
               flexWrap: "wrap",
@@ -982,7 +989,7 @@ const App = () => {
             <span
               style={{
                 color: "#6B778C",
-                fontSize: "13px",
+                fontSize: "14px",
               }}
             >
               (Tickets irrespective of date range)
@@ -1143,35 +1150,45 @@ const App = () => {
         <h2 style={sectionTitle}>SLA Performance</h2>
 
         {/* ===================== */}
-        {/* 🔹 RESPONSE SLA (TOP) */}
+        {/* NO SLA CONFIGURED */}
         {/* ===================== */}
-        {slaData.length > 0 && (
+        {!hasSLAConfigured ? (
+          <div style={{ textAlign: "center", marginTop: "16px" }}>
+            No SLA Tracked
+          </div>
+        ) : (
           <>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "60px",
-              marginTop: "16px",
-            }}>
+            {/* ===================== */}
+            {/* 🔹 TIME TO FIRST RESPONSE */}
+            {/* ===================== */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: "60px",
+                marginTop: "16px",
+              }}
+            >
+              {/* TITLE */}
               <span style={{ fontSize: "17px", fontWeight: "600", width: "220px" }}>
                 Time to First Response
               </span>
 
               {hasResponseData ? (
                 <>
-                  {/* WITHIN */}
+                  {/* WITHIN SLA */}
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
-                      gap: "8px", // 👈 label ↔ number spacing
-                      minWidth: "250px", // 👈 keeps alignment stable
+                      alignItems: "baseline",
+                      width: "320px",
+                      justifyContent: "space-between",
                       cursor: "pointer",
                     }}
                     onClick={() => {
                       let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59"
-            AND status NOT IN ("Canceled")
-            AND cf[10646] = "Met"`;
+                  AND status NOT IN ("Canceled")
+                  AND cf[10646] = "Met"`;
 
                       if (selectedProject) {
                         jql += ` AND project = "${selectedProject}"`;
@@ -1180,10 +1197,18 @@ const App = () => {
                       router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
                     }}
                   >
-                    <span style={{ fontSize: "16px",}}>
+                    <span style={{ width: "240px", fontSize: "16px" }}>
                       Tickets Responded within SLA
                     </span>
-                    <span style={{ width: "50px",color: "#36B37E", fontWeight: "700", fontSize: "20px", minWidth: "30px", textAlign: "right" }}>
+                    <span
+                      style={{
+                        width: "60px",
+                        textAlign: "right",
+                        fontWeight: "700",
+                        fontSize: "20px",
+                        color: "#36B37E",
+                      }}
+                    >
                       {slaData[2]?.count || 0}
                     </span>
                   </div>
@@ -1192,15 +1217,15 @@ const App = () => {
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
-                      gap: "8px", // 👈 label ↔ number spacing
-                      minWidth: "250px", // 👈 keeps alignment stable
+                      alignItems: "baseline",
+                      width: "320px",
+                      justifyContent: "space-between",
                       cursor: "pointer",
                     }}
                     onClick={() => {
                       let jql = `created >= "${fromDate}" AND created <= "${toDate} 23:59"
-            AND status NOT IN ("Canceled")
-            AND cf[10646] = "Breached"`;
+                  AND status NOT IN ("Canceled")
+                  AND cf[10646] = "Breached"`;
 
                       if (selectedProject) {
                         jql += ` AND project = "${selectedProject}"`;
@@ -1209,80 +1234,82 @@ const App = () => {
                       router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
                     }}
                   >
-                    <span style={{ fontSize: "16px" }}>
+                    <span style={{ width: "240px", fontSize: "16px" }}>
                       Tickets Responded outside SLA
                     </span>
-                    <span style={{  width: "50px", color: "#FF5630", fontWeight: "700", fontSize: "20px", minWidth: "30px", textAlign: "right" }}>
+                    <span
+                      style={{
+                        width: "60px",
+                        textAlign: "right",
+                        fontWeight: "700",
+                        fontSize: "20px",
+                        color: "#FF5630",
+                      }}
+                    >
                       {slaData[3]?.count || 0}
                     </span>
                   </div>
                 </>
               ) : (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    //gap: "60px",
-                    //marginTop: "8px",
-                  }}
-                >
-                  {/* EMPTY SPACE (same width as title column) */}
-                  <span style={{ width: "220px" }}></span>
-
-                  {/* MESSAGE */}
-                  <span style={{ fontSize: "16px", color: "#6B778C" }}>
-                    No tickets available
-                  </span>
-                </div>
+                <span style={{ color: "#6B778C", fontSize: "16px" }}>
+                  No tickets available
+                </span>
               )}
             </div>
-          </>
-        )}
 
-        {/* ===================== */}
-        {/* 🔹 RESOLUTION SLA (BOTTOM - EXISTING) */}
-        {/* ===================== */}
-        {slaData.length > 0 && (
-          <>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "60px",
-              marginTop: "16px",
-            }}>
+            {/* ===================== */}
+            {/* 🔹 TIME TO RESOLUTION */}
+            {/* ===================== */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: "60px",
+                marginTop: "16px",
+              }}
+            >
+              {/* TITLE */}
               <span style={{ fontSize: "17px", fontWeight: "600", width: "220px" }}>
                 Time to Resolution
               </span>
 
               {hasResolutionData ? (
                 <>
-                  {/* WITHIN */}
+                  {/* WITHIN SLA */}
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
-                      gap: "8px", // 👈 label ↔ number spacing
-                      minWidth: "250px", // 👈 keeps alignment stable
+                      alignItems: "baseline",
+                      width: "320px",
+                      justifyContent: "space-between",
                       cursor: "pointer",
                     }}
                     onClick={() => {
                       let jql = `created >= "${fromDate}" 
-                      AND created <= "${toDate} 23:59" 
-                      AND status NOT IN ("Canceled")
-                      AND statusCategory = Done
-                      AND cf[10273] = "Met"`;
+                  AND created <= "${toDate} 23:59" 
+                  AND status NOT IN ("Canceled")
+                  AND statusCategory = Done
+                  AND cf[10273] = "Met"`;
 
                       if (selectedProject) {
                         jql += ` AND project = "${selectedProject}"`;
                       }
+
                       router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
                     }}
-
                   >
-                    <span style={{ fontSize: "16px" }}>
+                    <span style={{ width: "240px", fontSize: "16px" }}>
                       Tickets Closed within SLA
                     </span>
-                    <span style={{  width: "84px", color: "#36B37E", fontWeight: "700", fontSize: "20px", minWidth: "30px", textAlign: "right" }}>
+                    <span
+                      style={{
+                        width: "60px",
+                        textAlign: "right",
+                        fontWeight: "700",
+                        fontSize: "20px",
+                        color: "#36B37E",
+                      }}
+                    >
                       {slaData[0]?.count || 0}
                     </span>
                   </div>
@@ -1291,59 +1318,48 @@ const App = () => {
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
-                      gap: "8px", // 👈 label ↔ number spacing
-                      minWidth: "250px", // 👈 keeps alignment stable
+                      alignItems: "baseline",
+                      width: "320px",
+                      justifyContent: "space-between",
                       cursor: "pointer",
                     }}
                     onClick={() => {
                       let jql = `created >= "${fromDate}" 
-                      AND created <= "${toDate} 23:59" 
-                      AND status NOT IN ("Canceled")
-                      AND statusCategory = Done
-                      AND cf[10273] = "Breached"`;
+                  AND created <= "${toDate} 23:59" 
+                  AND status NOT IN ("Canceled")
+                  AND statusCategory = Done
+                  AND cf[10273] = "Breached"`;
 
                       if (selectedProject) {
                         jql += ` AND project = "${selectedProject}"`;
                       }
+
                       router.open(`/issues/?jql=${encodeURIComponent(jql)}`);
                     }}
                   >
-                    <span style={{ fontSize: "16px" }}>
+                    <span style={{ width: "240px", fontSize: "16px" }}>
                       Tickets Closed outside SLA
                     </span>
-                    <span style={{  width: "84px",color: "#FF5630", fontWeight: "700", fontSize: "20px", textAlign: "right" }}>
+                    <span
+                      style={{
+                        width: "60px",
+                        textAlign: "right",
+                        fontWeight: "700",
+                        fontSize: "20px",
+                        color: "#FF5630",
+                      }}
+                    >
                       {slaData[1]?.count || 0}
                     </span>
                   </div>
                 </>
               ) : (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    //gap: "60px",
-                    //marginTop: "8px",
-                  }}
-                >
-                  {/* EMPTY SPACE (same width as title column) */}
-                  <span style={{ width: "220px" }}></span>
-
-                  {/* MESSAGE */}
-                  <span style={{ fontSize: "16px", color: "#6B778C" }}>
-                    No tickets available
-                  </span>
-                </div>
+                <span style={{ color: "#6B778C", fontSize: "16px" }}>
+                  No tickets available
+                </span>
               )}
             </div>
           </>
-        )}
-
-        {/* NO DATA */}
-        {slaData.length > 0 && slaData[0].count === null && (
-          <div style={{ textAlign: "center", marginTop: "12px" }}>
-            No SLA Tracked
-          </div>
         )}
       </div>
 
@@ -1427,19 +1443,38 @@ const App = () => {
       </div>
 
       {/* TABLE */}
-      <div style={{ ...card, display: "flex", flexWrap: "wrap", marginBottom: "24px" }}>
+      <div
+        style={{
+          ...card,
+          display: "flex",
+          flexDirection: "column", // 👈 KEY FIX
+          marginBottom: "24px",
+        }}
+      >
+      <div style={{ display: "flex", alignItems: "baseline", gap: "6px"}}>
         <h2 style={{ ...sectionTitle }}>Open & In Progress Tickets</h2>
         <span
           style={{
             color: "#6B778C",
-            fontSize: "18px",
+            fontSize: "14px",
             paddingLeft: "4px",
           }}
         >
           (Tickets irrespective of date range)
         </span>
+        </div>
 
-        {issues.length === 0 && <p>No tickets available</p>}
+        {issues.length === 0 && (
+          <div
+            style={{
+              marginTop: "12px",
+              fontSize: "14px",
+              //color: "#6B778C",
+            }}
+          >
+            No tickets available
+          </div>
+        )}
 
         {issues.length > 0 && (
           <>
@@ -1493,7 +1528,7 @@ const App = () => {
                 ))}
               </tbody>
             </table>
-
+            <div style={{ display: "inline-block" }}>
             {nextPageToken && (
               <button
                 onClick={() => fetchOpenTickets(nextPageToken)}
@@ -1511,6 +1546,7 @@ const App = () => {
                 Load More
               </button>
             )}
+            </div>
           </>
         )}
       </div>
