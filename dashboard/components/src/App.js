@@ -228,14 +228,22 @@ const App = () => {
           return category && projectStatusFilter.includes(category);
         });
 
-    const sorted = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    // ADD THIS FILTER
+    const jiraOnly = filtered.filter(
+      (project) => project.projectTypeKey === "software"
+    );
+
+    //SORT
+    const sorted = [...jiraOnly].sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
 
     setProjects(sorted);
 
     const isValidSelection = sorted.some((p) => p.key === selectedProject);
 
     if (!isValidSelection) {
-      const defaultProject = sorted.find((project) => project.key === "PHD");
+      const defaultProject = sorted.find((project) => project.key === "PISD");
 
       if (defaultProject) {
         setSelectedProject(defaultProject.key);
